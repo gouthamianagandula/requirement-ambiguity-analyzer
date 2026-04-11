@@ -199,6 +199,20 @@ async def analyzer_page(request: Request):
     )
 
 
+@app.get("/history-page", response_class=HTMLResponse)
+async def history_page(request: Request):
+    if not is_logged_in(request):
+        return RedirectResponse(url="/login")
+
+    user = request.session.get("user")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="history.html",
+        context={"user": user}
+    )
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page(request: Request):
     if not is_logged_in(request):

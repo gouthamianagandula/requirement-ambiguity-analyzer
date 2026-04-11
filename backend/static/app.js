@@ -127,7 +127,6 @@ async function analyzeRequirement() {
     }
 
     loadDashboard();
-    loadHistory();
   } catch (error) {
     resultBox.innerText = "Error connecting to backend.";
     if (highlightedOutput) highlightedOutput.innerHTML = "";
@@ -195,11 +194,12 @@ async function loadHistory() {
 
     data.history.forEach((item, index) => {
       html += `
-        <div class="sidebar-history-card">
+        <div class="sentence-card">
           <h4>History ${index + 1}</h4>
           <p><strong>Input:</strong> ${item.input_text}</p>
-          <p><strong>Label:</strong> ${item.predicted_label}</p>
+          <p><strong>Predicted Label:</strong> ${item.predicted_label}</p>
           <p><strong>Score:</strong> ${item.score}</p>
+          <p><strong>Rewrite:</strong> ${item.rewrite}</p>
           <p><strong>Date:</strong> ${item.created_at}</p>
         </div>
       `;
