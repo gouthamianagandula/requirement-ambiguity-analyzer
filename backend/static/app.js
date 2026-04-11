@@ -167,6 +167,51 @@ async function loadDashboard() {
   }
 }
 
+async function loadHistory() {
+  const historyContainer = document.getElementById("historyContainer");
+
+  if (!historyContainer) {
+    return;
+  }
+
+  historyContainer.innerHTML = "Loading history...";
+
+  try {
+    const response = await fetch("/history");
+    const data = await response.json();
+
+    if (!response.ok) {
+      historyContainer.innerHTML = "Failed to load history.";
+      return;
+    }
+
+    if (!data.history || data.history.length === 0) {
+      historyContainer.innerHTML = "<p>No saved history found.</p>";
+      return;
+    }
+
+    let historyHtml = "";
+
+    data.history.forEach((item, index) => {
+      historyHtml += `
+        <div class="sentence-card">
+          <h4>Analysis ${index + 1}</h4>
+          <p><strong>Input:</strong> ${item.input_text}</p>
+          <p><strong>Predicted Label:</strong> ${item.predicted_label}</p>
+          <p><strong>Score:</strong> ${item.score}</p>
+          <p><strong>Rewrite:</strong> ${item.rewrite}</p>
+          <p><strong>Date:</strong> ${item.created_at}</p>
+        </div>
+      `;
+    });
+
+    historyContainer.innerHTML = historyHtml;
+  } catch (error) {
+    historyContainer.innerHTML = "Error loading history.";
+  }
+}
+
 window.onload = function () {
   loadDashboard();
+  loadHistory();
 };

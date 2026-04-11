@@ -7,44 +7,63 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div class="page-container">
-    <div class="main-card">
-      <h1>Dashboard</h1>
-      <p class="subtitle">View analysis summary</p>
-
-      <div class="dashboard-grid">
-        <div class="dashboard-card">
-          <h3>Total Requirements Analyzed</h3>
-          <p id="totalRequirements">0</p>
+  <div class="analyzer-page">
+    <aside class="left-panel glass-card">
+      <div class="profile-box">
+        <div class="profile-avatar">
+          {{ user.name[0] if user and user.name else 'U' }}
         </div>
-
-        <div class="dashboard-card">
-          <h3>Ambiguous Count</h3>
-          <p id="ambiguousCount">0</p>
-        </div>
-
-        <div class="dashboard-card">
-          <h3>Average Score</h3>
-          <p id="averageScore">0</p>
-        </div>
-
-        <div class="dashboard-card">
-          <h3>Last Predicted Label</h3>
-          <p id="lastLabel">None</p>
+        <div>
+          <h3 id="profileName">{{ user.name }}</h3>
+          <p id="profileEmail">{{ user.email }}</p>
         </div>
       </div>
 
-      <button type="button" class="btn primary-btn" onclick="loadDashboard()">
+      <hr class="line" />
+
+      <h2>Dashboard Summary</h2>
+
+      <div class="dashboard-list">
+        <div class="dashboard-item">
+          <span>Total Requirements</span>
+          <strong id="totalRequirements">0</strong>
+        </div>
+
+        <div class="dashboard-item">
+          <span>Ambiguous Count</span>
+          <strong id="ambiguousCount">0</strong>
+        </div>
+
+        <div class="dashboard-item">
+          <span>Average Score</span>
+          <strong id="averageScore">0</strong>
+        </div>
+
+        <div class="dashboard-item">
+          <span>Last Predicted Label</span>
+          <strong id="lastLabel">None</strong>
+        </div>
+      </div>
+
+      <button type="button" class="btn primary-btn full-btn" onclick="loadDashboard()">
         Refresh Dashboard
       </button>
 
-      <br />
-      <br />
+      <br /><br />
+      <a href="/analyzer" class="btn primary-btn full-btn">Go to Analyzer</a>
 
-      <a href="/" class="link">Home</a> |
-      <a href="/login" class="link">Login</a> |
-      <a href="/analyzer" class="link">Analyzer</a>
-    </div>
+      <br /><br />
+      <a href="/logout" class="btn secondary-btn full-btn">Logout</a>
+    </aside>
+
+    <main class="right-panel glass-card">
+      <h1>User History</h1>
+      <p class="subtitle">All saved analyses will appear here</p>
+
+      <div id="historyContainer" class="result-box">
+        Loading history...
+      </div>
+    </main>
   </div>
 
   <script src="/static/app.js"></script>
