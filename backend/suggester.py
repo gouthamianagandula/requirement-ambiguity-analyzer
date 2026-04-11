@@ -1,16 +1,16 @@
 def generate_rewrite(sentence, detected_items):
     rewritten = sentence
 
-    replacement_map = {
-        "should": "shall",
-        "may": "shall",
-        "can": "shall be able to"
-    }
+    replacement_map = {}
 
     for item in detected_items:
         term = item["term"]
-        if term in replacement_map:
-            rewritten = rewritten.replace(term, replacement_map[term])
-            rewritten = rewritten.replace(term.capitalize(), replacement_map[term].capitalize())
+        replacement = item.get("replacement", "").strip()
+        if replacement:
+            replacement_map[term.lower()] = replacement
+
+    for term, replacement in replacement_map.items():
+        rewritten = rewritten.replace(term, replacement)
+        rewritten = rewritten.replace(term.capitalize(), replacement.capitalize())
 
     return rewritten

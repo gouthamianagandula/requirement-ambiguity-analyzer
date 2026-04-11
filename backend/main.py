@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from backend.detector import detect
+from backend.detector import analyze_text, detect
 from backend.scorer import calculate_score, get_score_label
 from backend.suggester import generate_rewrite
 from backend.classifier import predict_label
@@ -92,6 +92,40 @@ def write_stats(data):
 
 def is_logged_in(request: Request):
     return request.session.get("user") is not None
+
+
+def build_highlight_html(text, issues):
+    if not issues:
+        return text
+
+    issues_sorted = sorted(issues, key=lambda x: x["start"])
+    result = []
+    last_index = 0
+
+    for issue in issues_sorted:
+        start = issue["start"]
+        end = issue["end"]
+
+        if start < last_index:
+            continue
+
+        result.append(text[last_index:start])
+
+        highlighted_word = text[start:end]
+        replacement = issue.get("replacement", "")
+        suggestion = issue.get("suggestion", "")
+        severity = issue.get("severity", "Medium")
+
+        tooltip = f"{issue['term']} | {issue['category']} | {severity} | Replace with: {replacement or suggestion}"
+        span = (
+            f"<span class='highlight-word' title=\"{tooltip}\">"
+            f"{highlighted_word}</span>"
+        )
+        result.append(span)
+        last_index = end
+
+    result.append(text[last_index:])
+    return "".join(result)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -180,16 +214,28 @@ async def analyze(data: RequirementInput, request: Request):
 
     text = data.text.strip()
 
-    detected_items = detect(text)
-    score = calculate_score(detected_items)
+    analysis = analyze_text(text)
+    all_issues = analysis["all_issues"]
+
+    score = calculate_score(all_issues)
     score_label = get_score_label(score)
-    rewritten = generate_rewrite(text, detected_items)
+    rewritten = generate_rewrite(text, all_issues)
     ml_label = predict_label(text)
+    highlighted_html = build_highlight_html(text, all_issues)
+
+    changes = []
+    for issue in all_issues:
+        changes.append({
+            "term": issue["term"],
+            "replace_with": issue.get("replacement", ""),
+            "category": issue["category"],
+            "severity": issue["severity"]
+        })
 
     stats = read_stats()
     stats["total_requirements_analyzed"] += 1
 
-    if detected_items:
+    if all_issues:
         stats["ambiguous_count"] += 1
 
     stats["total_score_sum"] += score
@@ -205,8 +251,11 @@ async def analyze(data: RequirementInput, request: Request):
         "ml_label": ml_label,
         "score": score,
         "score_label": score_label,
-        "issues": detected_items,
-        "rewrite": rewritten
+        "issues": all_issues,
+        "rewrite": rewritten,
+        "sentence_analysis": analysis["sentences"],
+        "highlighted_html": highlighted_html,
+        "changes": changes
     }
 
 
@@ -230,71 +279,39 @@ async def get_stats(request: Request):
 
 @app.get("/blog", response_class=HTMLResponse)
 async def blog_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="blog.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="blog.html", context={})
 
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="pricing.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="pricing.html", context={})
 
 
 @app.get("/services", response_class=HTMLResponse)
 async def services_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="services.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="services.html", context={})
 
 
 @app.get("/results", response_class=HTMLResponse)
 async def results_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="results.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="results.html", context={})
 
 
 @app.get("/training", response_class=HTMLResponse)
 async def training_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="training.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="training.html", context={})
 
 
 @app.get("/tools", response_class=HTMLResponse)
 async def tools_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="tools.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="tools.html", context={})
 
 
 @app.get("/consulting", response_class=HTMLResponse)
 async def consulting_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="consulting.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="consulting.html", context={})
 
 
 @app.get("/contact", response_class=HTMLResponse)
 async def contact_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="contact.html",
-        context={}
-    )
+    return templates.TemplateResponse(request=request, name="contact.html", context={})
