@@ -1,0 +1,15 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 40px;
+}
+
+textarea {
+  width: 400px;
+  height: 120px;
+}
+
+button {
+  padding: 10px 14px;
+  margin-top: 10px;
+  cursor: pointer;
+}

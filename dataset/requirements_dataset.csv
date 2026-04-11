@@ -1,0 +1,31 @@
+sentence,label
+The system should be fast,non_measurable
+The application should be user-friendly,subjective
+The platform may support multiple users,optional
+The system shall respond within 2 seconds,clear
+The software shall maintain 99.9 percent uptime,clear
+The application should be secure,non_measurable
+The interface shall allow users to log in within 5 seconds,clear
+The software can generate reports,weak_modality
+The system should be easy to use,subjective
+The server shall process 100 requests per minute,clear
+The platform should be reliable,non_measurable
+The app may allow password reset by email,optional
+The system should provide quick results,non_measurable
+The software shall encrypt user passwords using bcrypt,clear
+The application should be simple,subjective
+The platform can store some records,weak_modality
+The module shall generate a report in less than 3 seconds,clear
+The dashboard should be efficient,non_measurable
+The product may support many clients,optional
+The page shall load within 1 second,clear
+The software should be robust,non_measurable
+The interface should be intuitive,subjective
+The system can allow few administrators,weak_modality
+The system shall support 500 concurrent users,clear
+The software should perform better,non_measurable
+The app may offer additional settings,optional
+The module shall validate all required fields before submission,clear
+The website should be easy for beginners,subjective
+The system can send alerts,weak_modality
+The platform shall archive logs every 24 hours,clear

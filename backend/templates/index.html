@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Requirement Ambiguity Analyzer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h1>Requirement Ambiguity Analyzer</h1>
+
+<h3>Login</h3>
+<p>Real login will be added later</p>
+<button onclick="alert('Google login coming soon')">Sign in with Gmail</button>
+<button onclick="alert('Microsoft login coming soon')">Sign in with Outlook</button>
+
+<hr>
+
+<h3>Analyzer</h3>
+<textarea id="requirementText" placeholder="Enter requirement"></textarea><br><br>
+<button onclick="analyzeRequirement()">Analyze</button>
+
+<pre id="analysisResult"></pre>
+
+<hr>
+
+<h3>Dashboard</h3>
+<button onclick="loadDashboard()">Load Dashboard</button>
+
+<p>Total: <span id="totalRequirements"></span></p>
+<p>Ambiguous: <span id="ambiguousCount"></span></p>
+<p>Average Score: <span id="averageScore"></span></p>
+<p>Last Label: <span id="lastLabel"></span></p>
+
+<script src="/static/app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Requirement Ambiguity Analyzer</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <h1>Requirement Ambiguity Analyzer</h1>
+
+  <h3>Login</h3>
+  <input type="email" id="email" placeholder="Enter Gmail" />
+  <br />
+  <br />
+  <input type="password" id="password" placeholder="Password" />
+  <br />
+  <br />
+  <button type="button" onclick="login()">Login</button>
+
+  <hr />
+
+  <h3>Requirement Analyzer</h3>
+  <textarea id="text" placeholder="Enter requirement"></textarea>
+  <br />
+  <br />
+  <button type="button" onclick="analyze()">Analyze</button>
+
+  <pre id="result"></pre>
+
+  <hr />
+
+  <h3>Dashboard</h3>
+  <button type="button" onclick="loadDashboard()">Load Dashboard</button>
+
+  <p>Total: <span id="total"></span></p>
+  <p>Ambiguous: <span id="ambiguous"></span></p>
+  <p>Average Score: <span id="avg"></span></p>
+  <p>Last Label: <span id="label"></span></p>
+
+  <script src="./script.js"></script>
+</body>
+</html>

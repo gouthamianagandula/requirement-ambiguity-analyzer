@@ -1,0 +1,38 @@
+{
+  "fast": {
+    "category": "Non-measurable Performance",
+    "explanation": "The word 'fast' is vague because it does not define any exact response time.",
+    "suggestion": "Specify a measurable response time such as 'within 2 seconds'.",
+    "severity": "High"
+  },
+  "user-friendly": {
+    "category": "Subjective Usability",
+    "explanation": "The term 'user-friendly' is subjective and means different things to different people.",
+    "suggestion": "Define usability using task completion time, error rate, or user satisfaction score.",
+    "severity": "High"
+  },
+  "easy": {
+    "category": "Subjective Usability",
+    "explanation": "The word 'easy' is subjective and not measurable.",
+    "suggestion": "Specify how many steps or how much time is acceptable.",
+    "severity": "High"
+  },
+  "efficient": {
+    "category": "Non-measurable Quality",
+    "explanation": "The term 'efficient' is unclear unless you define the metric.",
+    "suggestion": "Specify CPU usage, memory usage, throughput, or execution time.",
+    "severity": "High"
+  },
+  "secure": {
+    "category": "Non-measurable Security",
+    "explanation": "The term 'secure' is vague unless specific controls are mentioned.",
+    "suggestion": "Specify encryption, authentication, authorization, or security standard.",
+    "severity": "High"
+  },
+  "reliable": {
+    "category": "Non-measurable Reliability",
+    "explanation": "The term 'reliable' should be expressed with measurable uptime or failure rate.",
+    "suggestion": "Specify uptime like '99.9% monthly availability'.",
+    "severity": "High"
+  }
+}
