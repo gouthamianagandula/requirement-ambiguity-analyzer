@@ -72,7 +72,7 @@ def read_stats():
             "ambiguous_count": 0,
             "average_score": 0,
             "last_predicted_label": "None",
-            "total_score_sum": 0
+            "total_score_sum": 0,
         }
 
     try:
@@ -86,7 +86,7 @@ def read_stats():
         "ambiguous_count": data.get("ambiguous_count", 0),
         "average_score": data.get("average_score", 0),
         "last_predicted_label": data.get("last_predicted_label", "None"),
-        "total_score_sum": data.get("total_score_sum", 0)
+        "total_score_sum": data.get("total_score_sum", 0),
     }
 
 
@@ -122,7 +122,11 @@ def build_highlight_html(text, issues):
         suggestion = issue.get("suggestion", "")
         severity = issue.get("severity", "Medium")
 
-        tooltip = f"{issue['term']} | {issue['category']} | {severity} | Replace with: {replacement or suggestion}"
+        tooltip = (
+            f"{issue['term']} | {issue['category']} | {severity} | "
+            f"Replace with: {replacement or suggestion}"
+        )
+
         span = (
             f"<span class='highlight-word' title=\"{tooltip}\">"
             f"{highlighted_word}</span>"
@@ -147,7 +151,7 @@ async def login_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={}
+        context={},
     )
 
 
@@ -168,7 +172,7 @@ async def auth_google(request: Request):
     request.session["user"] = {
         "name": user_info.get("name", "Google User"),
         "email": user_info.get("email", ""),
-        "provider": "Google"
+        "provider": "Google",
     }
 
     return RedirectResponse(url="/analyzer")
@@ -176,7 +180,7 @@ async def auth_google(request: Request):
 
 @app.get("/login/microsoft")
 async def login_microsoft():
-    return JSONResponse({"message": "Real Outlook login will be added later."})
+    return RedirectResponse(url="/login")
 
 
 @app.get("/logout")
@@ -195,7 +199,7 @@ async def analyzer_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="analyzer.html",
-        context={"user": user}
+        context={"user": user},
     )
 
 
@@ -209,7 +213,7 @@ async def history_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="history.html",
-        context={"user": user}
+        context={"user": user},
     )
 
 
@@ -223,7 +227,7 @@ async def dashboard_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context={"user": user}
+        context={"user": user},
     )
 
 
@@ -250,7 +254,7 @@ async def analyze(data: RequirementInput, request: Request):
             "term": issue["term"],
             "replace_with": issue.get("replacement", ""),
             "category": issue["category"],
-            "severity": issue["severity"]
+            "severity": issue["severity"],
         })
 
     stats = read_stats()
@@ -273,7 +277,7 @@ async def analyze(data: RequirementInput, request: Request):
         input_text=text,
         predicted_label=ml_label,
         score=score,
-        rewrite=rewritten
+        rewrite=rewritten,
     )
 
     return {
@@ -285,7 +289,7 @@ async def analyze(data: RequirementInput, request: Request):
         "rewrite": rewritten,
         "sentence_analysis": analysis["sentences"],
         "highlighted_html": highlighted_html,
-        "changes": changes
+        "changes": changes,
     }
 
 
@@ -303,7 +307,7 @@ async def get_stats(request: Request):
         "average_score": stats["average_score"],
         "last_predicted_label": stats["last_predicted_label"],
         "user_name": user.get("name", "User"),
-        "user_email": user.get("email", "")
+        "user_email": user.get("email", ""),
     }
 
 
@@ -320,39 +324,71 @@ async def history(request: Request):
 
 @app.get("/blog", response_class=HTMLResponse)
 async def blog_page(request: Request):
-    return templates.TemplateResponse(request=request, name="blog.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="blog.html",
+        context={},
+    )
 
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
-    return templates.TemplateResponse(request=request, name="pricing.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="pricing.html",
+        context={},
+    )
 
 
 @app.get("/services", response_class=HTMLResponse)
 async def services_page(request: Request):
-    return templates.TemplateResponse(request=request, name="services.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="services.html",
+        context={},
+    )
 
 
 @app.get("/results", response_class=HTMLResponse)
 async def results_page(request: Request):
-    return templates.TemplateResponse(request=request, name="results.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="results.html",
+        context={},
+    )
 
 
 @app.get("/training", response_class=HTMLResponse)
 async def training_page(request: Request):
-    return templates.TemplateResponse(request=request, name="training.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="training.html",
+        context={},
+    )
 
 
 @app.get("/tools", response_class=HTMLResponse)
 async def tools_page(request: Request):
-    return templates.TemplateResponse(request=request, name="tools.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="tools.html",
+        context={},
+    )
 
 
 @app.get("/consulting", response_class=HTMLResponse)
 async def consulting_page(request: Request):
-    return templates.TemplateResponse(request=request, name="consulting.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="consulting.html",
+        context={},
+    )
 
 
 @app.get("/contact", response_class=HTMLResponse)
 async def contact_page(request: Request):
-    return templates.TemplateResponse(request=request, name="contact.html", context={})
+    return templates.TemplateResponse(
+        request=request,
+        name="contact.html",
+        context={},
+    )

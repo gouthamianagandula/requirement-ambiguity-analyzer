@@ -31,19 +31,81 @@
     </div>
   </header>
 
-  <main class="landing-main">
-    <section class="landing-hero">
+  <main class="modern-login-page">
+    <div class="login-bg-shape shape-one"></div>
+    <div class="login-bg-shape shape-two"></div>
+    <div class="login-bg-shape shape-three"></div>
+
+    <section class="login-info-panel">
+      <div class="info-badge">AI Powered Requirement Engineering</div>
+
       <h1>Requirement Ambiguity Analyzer</h1>
       <p>
-        Analyze software requirements using AI, detect ambiguity, improve clarity,
-        highlight vague terms, and generate better rewrites for professional requirement engineering.
+        Analyze software requirements with AI, detect vague words,
+        improve clarity, highlight weak statements, and generate
+        professional rewrites for better requirement quality.
       </p>
 
-      <div class="landing-login-box">
-        <a href="/login/google" class="landing-btn google-btn">Sign in with Gmail</a>
-        <a href="/login/microsoft" class="landing-btn microsoft-btn">Sign in with Outlook</a>
+      <div class="feature-grid">
+        <div class="feature-tile">
+          <h3>AI Analysis</h3>
+          <p>Detect ambiguous language in typed sentences and paragraphs.</p>
+        </div>
+
+        <div class="feature-tile">
+          <h3>Highlight Issues</h3>
+          <p>Highlight unclear words and show what should be changed.</p>
+        </div>
+
+        <div class="feature-tile">
+          <h3>Dashboard</h3>
+          <p>Track requirement count, ambiguity count, score, and history.</p>
+        </div>
+
+        <div class="feature-tile">
+          <h3>Professional Workflow</h3>
+          <p>Use login, analyzer, history, and dashboard in one complete app.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="login-card-wrap">
+      <div class="login-card">
+        <div class="login-card-brand">Requirement Ambiguity Analyzer</div>
+        <h2>Log in to continue</h2>
+
+        <a href="/login/google" class="google-login-btn">
+          <span class="google-icon">G</span>
+          <span>Continue with Google</span>
+        </a>
+
+        <div class="login-divider">
+          <span>OR</span>
+        </div>
+
+        <div class="login-input-group">
+          <input type="email" placeholder="Email" disabled />
+          <input type="password" placeholder="Password" disabled />
+        </div>
+
+        <div class="login-row">
+          <label class="remember-me">
+            <input type="checkbox" disabled />
+            <span>Remember me</span>
+          </label>
+
+          <a href="/contact" class="forgot-link">Need help?</a>
+        </div>
+
+        <button class="email-login-btn" disabled>LOG IN</button>
+
+        <p class="login-footer-text">
+          Secure sign-in is currently enabled with Google.
+        </p>
       </div>
     </section>
   </main>
+
+  <script src="/static/app.js"></script>
 </body>
 </html>
