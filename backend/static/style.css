@@ -6,8 +6,139 @@ body {
   margin: 0;
   font-family: Arial, sans-serif;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.site-header {
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: #1f2937;
   color: white;
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: white;
+}
+
+.brand-text h2 {
+  margin: 0;
+  font-size: 20px;
+  color: white;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.site-nav a {
+  color: #e5e7eb;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.site-nav a:hover {
+  color: white;
+}
+
+.header-signin-btn {
+  display: inline-block;
+  text-decoration: none;
+  background: #2563eb;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.header-signin-btn:hover {
+  background: #1d4ed8;
+}
+
+.landing-main {
+  min-height: calc(100vh - 84px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: #e5e7eb;
+}
+
+.landing-hero {
+  width: 100%;
+  max-width: 1000px;
+  text-align: center;
+  background: white;
+  border-radius: 24px;
+  padding: 56px 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.landing-hero h1 {
+  margin-top: 0;
+  margin-bottom: 18px;
+  font-size: 64px;
+  color: #111827;
+}
+
+.landing-hero p {
+  max-width: 900px;
+  margin: 0 auto 36px;
+  font-size: 20px;
+  line-height: 1.7;
+  color: #374151;
+}
+
+.landing-login-box {
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing-btn {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+  padding: 15px 18px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+}
+
+.google-btn {
+  background: linear-gradient(135deg, #ea4335, #fbbc05);
+}
+
+.microsoft-btn {
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+}
+
+.google-btn:hover,
+.microsoft-btn:hover {
+  opacity: 0.95;
 }
 
 .login-page {
@@ -37,7 +168,6 @@ body {
 .hero-card {
   width: 100%;
   max-width: 760px;
-  animation: fadeUp 0.7s ease;
 }
 
 .hero-card h1 {
@@ -73,7 +203,6 @@ body {
   text-align: center;
   position: relative;
   overflow: hidden;
-  animation: fadeUp 0.7s ease;
 }
 
 .signin-card h2 {
@@ -103,12 +232,6 @@ body {
   cursor: pointer;
   font-size: 16px;
   font-weight: bold;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.btn:hover {
-  transform: translateY(-2px);
-  opacity: 0.95;
 }
 
 .primary-btn {
@@ -121,41 +244,8 @@ body {
   color: white;
 }
 
-.google-btn {
-  background: linear-gradient(135deg, #ea4335, #fbbc05);
-  color: white;
-}
-
-.microsoft-btn {
-  background: linear-gradient(135deg, #2563eb, #06b6d4);
-  color: white;
-}
-
 .full-btn {
   width: 100%;
-}
-
-.floating-circle {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.25;
-  animation: floatMove 5s ease-in-out infinite alternate;
-}
-
-.circle-one {
-  width: 120px;
-  height: 120px;
-  background: #3b82f6;
-  top: -20px;
-  right: -20px;
-}
-
-.circle-two {
-  width: 90px;
-  height: 90px;
-  background: #8b5cf6;
-  bottom: -20px;
-  left: -10px;
 }
 
 .page-container {
@@ -174,7 +264,6 @@ body {
   border-radius: 20px;
   padding: 40px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  animation: fadeUp 0.7s ease;
 }
 
 .analyzer-page {
@@ -183,6 +272,8 @@ body {
   grid-template-columns: 320px 1fr;
   gap: 24px;
   padding: 24px;
+  background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+  color: white;
 }
 
 .left-panel {
@@ -210,6 +301,7 @@ body {
   justify-content: center;
   font-weight: bold;
   font-size: 22px;
+  color: white;
 }
 
 .profile-box h3 {
@@ -314,25 +406,25 @@ textarea {
   text-decoration: underline;
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
+@media (max-width: 1100px) {
+  .site-header {
+    flex-direction: column;
+    height: auto;
+    gap: 14px;
+    padding: 18px;
   }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes floatMove {
-  from {
-    transform: translateY(0) translateX(0);
+  .site-nav {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
-  to {
-    transform: translateY(12px) translateX(12px);
+  .landing-hero h1 {
+    font-size: 42px;
+  }
+
+  .landing-hero p {
+    font-size: 17px;
   }
 }
 
@@ -342,10 +434,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .hero-features {
-    grid-template-columns: 1fr;
-  }
-
+  .hero-features,
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
