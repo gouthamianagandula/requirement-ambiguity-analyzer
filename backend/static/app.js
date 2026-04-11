@@ -195,12 +195,11 @@ async function loadHistory() {
 
     data.history.forEach((item, index) => {
       html += `
-        <div class="sentence-card">
+        <div class="sidebar-history-card">
           <h4>History ${index + 1}</h4>
           <p><strong>Input:</strong> ${item.input_text}</p>
-          <p><strong>Predicted Label:</strong> ${item.predicted_label}</p>
+          <p><strong>Label:</strong> ${item.predicted_label}</p>
           <p><strong>Score:</strong> ${item.score}</p>
-          <p><strong>Rewrite:</strong> ${item.rewrite}</p>
           <p><strong>Date:</strong> ${item.created_at}</p>
         </div>
       `;

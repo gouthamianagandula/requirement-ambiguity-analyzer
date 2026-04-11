@@ -10,7 +10,6 @@ body {
   color: #111827;
 }
 
-/* ===== HEADER ===== */
 .site-header {
   height: 84px;
   display: flex;
@@ -76,7 +75,6 @@ body {
   background: #1d4ed8;
 }
 
-/* ===== LOGIN PAGE ===== */
 .landing-main {
   min-height: calc(100vh - 84px);
   display: flex;
@@ -119,7 +117,6 @@ body {
   gap: 16px;
 }
 
-/* ===== BUTTONS ===== */
 .landing-btn,
 .btn {
   display: inline-block;
@@ -152,7 +149,6 @@ body {
   width: 100%;
 }
 
-/* ===== ANALYZER PAGE ===== */
 .analyzer-page {
   min-height: 100vh;
   display: grid;
@@ -170,7 +166,11 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ===== PROFILE ===== */
+.left-panel {
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
 .profile-box {
   display: flex;
   align-items: center;
@@ -188,9 +188,45 @@ body {
   font-weight: bold;
 }
 
-/* ===== DASHBOARD ===== */
+.profile-box h3 {
+  margin: 0;
+}
+
+.profile-box p {
+  margin: 4px 0 0;
+  color: #dbeafe;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.line {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 20px 0;
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 18px 0 22px;
+}
+
 .dashboard-item {
-  margin: 10px 0;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.dashboard-item span {
+  display: block;
+  color: #dbeafe;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.dashboard-item strong {
+  font-size: 22px;
 }
 
 textarea {
@@ -201,7 +237,10 @@ textarea {
   border: none;
 }
 
-/* ===== RESULT BOX ===== */
+.top-actions {
+  margin: 18px 0;
+}
+
 .result-box {
   background: rgba(15, 23, 42, 0.55);
   padding: 14px;
@@ -210,7 +249,6 @@ textarea {
   white-space: pre-wrap;
 }
 
-/* ===== HIGHLIGHT ===== */
 .highlight-word {
   background: #facc15;
   color: #111827;
@@ -219,7 +257,6 @@ textarea {
   font-weight: bold;
 }
 
-/* ===== ANALYSIS UI ===== */
 .analysis-section {
   margin-top: 22px;
 }
@@ -260,14 +297,55 @@ textarea {
   margin-bottom: 14px;
 }
 
+.sentence-card p {
+  margin: 8px 0;
+}
+
 .sentence-ok {
   color: #86efac;
   font-weight: bold;
 }
 
-/* ===== RESPONSIVE ===== */
+.sidebar-history-section {
+  margin-top: 22px;
+}
+
+.sidebar-history-section h2 {
+  margin-bottom: 10px;
+}
+
+.sidebar-history-box {
+  max-height: 340px;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.sidebar-history-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.sidebar-history-card h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.sidebar-history-card p {
+  margin: 6px 0;
+  font-size: 13px;
+  color: #dbeafe;
+}
+
 @media (max-width: 900px) {
   .analyzer-page {
     grid-template-columns: 1fr;
+  }
+
+  .left-panel {
+    height: auto;
   }
 }
