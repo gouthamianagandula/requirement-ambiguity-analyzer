@@ -1,6 +1,24 @@
 let barChartInstance = null;
 let doughnutChartInstance = null;
 
+function applySavedTheme() {
+  const savedTheme = localStorage.getItem("theme") || "light-theme";
+  document.body.classList.remove("light-theme", "dark-theme");
+  document.body.classList.add(savedTheme);
+}
+
+function toggleTheme() {
+  if (document.body.classList.contains("dark-theme")) {
+    document.body.classList.remove("dark-theme");
+    document.body.classList.add("light-theme");
+    localStorage.setItem("theme", "light-theme");
+  } else {
+    document.body.classList.remove("light-theme");
+    document.body.classList.add("dark-theme");
+    localStorage.setItem("theme", "dark-theme");
+  }
+}
+
 async function analyzeRequirement() {
   const textBox = document.getElementById("requirementText");
   const resultBox = document.getElementById("analysisResult");
@@ -145,7 +163,7 @@ function renderCharts(totalRequirements, ambiguousCount) {
   const barCanvas = document.getElementById("barChart");
   const doughnutCanvas = document.getElementById("doughnutChart");
 
-  if (barCanvas) {
+  if (barCanvas && typeof Chart !== "undefined") {
     if (barChartInstance) {
       barChartInstance.destroy();
     }
@@ -154,13 +172,16 @@ function renderCharts(totalRequirements, ambiguousCount) {
       type: "bar",
       data: {
         labels: ["Total", "Ambiguous", "Clear"],
-        datasets: [{
-          label: "Requirements",
-          data: [totalRequirements, ambiguousCount, clearCount]
-        }]
+        datasets: [
+          {
+            label: "Requirements",
+            data: [totalRequirements, ambiguousCount, clearCount]
+          }
+        ]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: true,
         plugins: {
           legend: {
             display: false
@@ -170,7 +191,7 @@ function renderCharts(totalRequirements, ambiguousCount) {
     });
   }
 
-  if (doughnutCanvas) {
+  if (doughnutCanvas && typeof Chart !== "undefined") {
     if (doughnutChartInstance) {
       doughnutChartInstance.destroy();
     }
@@ -179,12 +200,15 @@ function renderCharts(totalRequirements, ambiguousCount) {
       type: "doughnut",
       data: {
         labels: ["Ambiguous", "Clear"],
-        datasets: [{
-          data: [ambiguousCount, clearCount]
-        }]
+        datasets: [
+          {
+            data: [ambiguousCount, clearCount]
+          }
+        ]
       },
       options: {
-        responsive: true
+        responsive: true,
+        maintainAspectRatio: true
       }
     });
   }
@@ -281,6 +305,7 @@ async function loadHistory() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  applySavedTheme();
   loadDashboard();
   loadHistory();
 });

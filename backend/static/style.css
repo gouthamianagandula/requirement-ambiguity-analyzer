@@ -2,12 +2,71 @@
   box-sizing: border-box;
 }
 
+:root {
+  --page-bg: #f3f4f6;
+  --text-main: #111827;
+  --header-bg: #1f2937;
+  --header-text: #ffffff;
+  --hero-bg: #ffffff;
+  --hero-text: #374151;
+  --panel-bg: rgba(255, 255, 255, 0.08);
+  --panel-text: #ffffff;
+  --muted-text: #dbeafe;
+  --box-bg: rgba(15, 23, 42, 0.45);
+  --result-bg: rgba(15, 23, 42, 0.55);
+  --primary-btn: linear-gradient(135deg, #2563eb, #7c3aed);
+  --secondary-btn: #6b7280;
+  --textarea-bg: #ffffff;
+  --textarea-text: #111827;
+  --highlight-bg: #facc15;
+  --highlight-text: #111827;
+  --app-bg: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+}
+
+body.light-theme {
+  --page-bg: #f3f4f6;
+  --text-main: #111827;
+  --header-bg: #1f2937;
+  --header-text: #ffffff;
+  --hero-bg: #ffffff;
+  --hero-text: #374151;
+  --panel-bg: rgba(255, 255, 255, 0.08);
+  --panel-text: #ffffff;
+  --muted-text: #dbeafe;
+  --box-bg: rgba(15, 23, 42, 0.45);
+  --result-bg: rgba(15, 23, 42, 0.55);
+  --textarea-bg: #ffffff;
+  --textarea-text: #111827;
+  --highlight-bg: #facc15;
+  --highlight-text: #111827;
+  --app-bg: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+}
+
+body.dark-theme {
+  --page-bg: #0b1220;
+  --text-main: #f8fafc;
+  --header-bg: #020617;
+  --header-text: #ffffff;
+  --hero-bg: #111827;
+  --hero-text: #cbd5e1;
+  --panel-bg: rgba(2, 6, 23, 0.8);
+  --panel-text: #f8fafc;
+  --muted-text: #cbd5e1;
+  --box-bg: rgba(30, 41, 59, 0.9);
+  --result-bg: rgba(30, 41, 59, 0.9);
+  --textarea-bg: #0f172a;
+  --textarea-text: #f8fafc;
+  --highlight-bg: #f59e0b;
+  --highlight-text: #111827;
+  --app-bg: linear-gradient(135deg, #020617, #0f172a, #1e293b);
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   min-height: 100vh;
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--page-bg);
+  color: var(--text-main);
 }
 
 .site-header {
@@ -16,8 +75,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
-  background: #1f2937;
-  color: white;
+  background: var(--header-bg);
+  color: var(--header-text);
 }
 
 .brand-wrap {
@@ -42,7 +101,7 @@ body {
 .brand-text h2 {
   margin: 0;
   font-size: 20px;
-  color: white;
+  color: var(--header-text);
 }
 
 .site-nav {
@@ -81,14 +140,14 @@ body {
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  background: #e5e7eb;
+  background: var(--page-bg);
 }
 
 .landing-hero {
   width: 100%;
   max-width: 1000px;
   text-align: center;
-  background: white;
+  background: var(--hero-bg);
   border-radius: 24px;
   padding: 56px 40px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
@@ -98,7 +157,7 @@ body {
   margin-top: 0;
   margin-bottom: 18px;
   font-size: 48px;
-  color: #111827;
+  color: var(--text-main);
 }
 
 .landing-hero p {
@@ -106,7 +165,7 @@ body {
   margin: 0 auto 36px;
   font-size: 18px;
   line-height: 1.7;
-  color: #374151;
+  color: var(--hero-text);
 }
 
 .landing-login-box {
@@ -127,6 +186,8 @@ body {
   font-size: 16px;
   font-weight: bold;
   color: white;
+  border: none;
+  cursor: pointer;
 }
 
 .google-btn {
@@ -138,11 +199,11 @@ body {
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  background: var(--primary-btn);
 }
 
 .secondary-btn {
-  background: #6b7280;
+  background: var(--secondary-btn);
 }
 
 .full-btn {
@@ -155,15 +216,15 @@ body {
   grid-template-columns: 320px 1fr;
   gap: 24px;
   padding: 24px;
-  background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
-  color: white;
+  background: var(--app-bg);
+  color: var(--panel-text);
 }
 
 .left-panel,
 .right-panel {
   border-radius: 20px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--panel-bg);
 }
 
 .profile-box {
@@ -189,7 +250,7 @@ body {
 
 .profile-box p {
   margin: 4px 0 0;
-  color: #dbeafe;
+  color: var(--muted-text);
   font-size: 14px;
 }
 
@@ -207,14 +268,14 @@ body {
 }
 
 .dashboard-item {
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--box-bg);
   border-radius: 14px;
   padding: 16px;
 }
 
 .dashboard-item span {
   display: block;
-  color: #dbeafe;
+  color: var(--muted-text);
   font-size: 14px;
   margin-bottom: 8px;
 }
@@ -229,6 +290,8 @@ textarea {
   padding: 14px;
   border-radius: 14px;
   border: none;
+  background: var(--textarea-bg);
+  color: var(--textarea-text);
 }
 
 .top-actions {
@@ -236,7 +299,7 @@ textarea {
 }
 
 .result-box {
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--result-bg);
   padding: 14px;
   border-radius: 14px;
   margin-top: 10px;
@@ -244,8 +307,8 @@ textarea {
 }
 
 .highlight-word {
-  background: #facc15;
-  color: #111827;
+  background: var(--highlight-bg);
+  color: var(--highlight-text);
   padding: 2px 6px;
   border-radius: 6px;
   font-weight: bold;
@@ -281,11 +344,11 @@ textarea {
 
 .change-meta {
   font-size: 13px;
-  color: #dbeafe;
+  color: var(--muted-text);
 }
 
 .sentence-card {
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--box-bg);
   border-radius: 14px;
   padding: 14px;
   margin-bottom: 14px;
@@ -303,7 +366,7 @@ textarea {
 }
 
 .chart-card {
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--box-bg);
   border-radius: 16px;
   padding: 18px;
 }
