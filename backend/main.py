@@ -12,10 +12,11 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from backend.detector import analyze_text, detect
+from backend.detector import analyze_text
 from backend.scorer import calculate_score, get_score_label
 from backend.suggester import generate_rewrite
 from backend.classifier import predict_label
+from backend.database import init_db, save_history, get_user_history
 
 load_dotenv()
 
@@ -57,6 +58,11 @@ oauth.register(
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
     client_kwargs={"scope": "openid email profile"},
 )
+
+
+@app.on_event("startup")
+def startup_event():
+    init_db()
 
 
 def read_stats():
@@ -213,6 +219,7 @@ async def analyze(data: RequirementInput, request: Request):
         return JSONResponse({"error": "Login required"}, status_code=401)
 
     text = data.text.strip()
+    user = request.session.get("user")
 
     analysis = analyze_text(text)
     all_issues = analysis["all_issues"]
@@ -246,6 +253,15 @@ async def analyze(data: RequirementInput, request: Request):
 
     write_stats(stats)
 
+    save_history(
+        user_name=user.get("name", "User"),
+        user_email=user.get("email", ""),
+        input_text=text,
+        predicted_label=ml_label,
+        score=score,
+        rewrite=rewritten
+    )
+
     return {
         "input": text,
         "ml_label": ml_label,
@@ -275,6 +291,17 @@ async def get_stats(request: Request):
         "user_name": user.get("name", "User"),
         "user_email": user.get("email", "")
     }
+
+
+@app.get("/history")
+async def history(request: Request):
+    if not is_logged_in(request):
+        return JSONResponse({"error": "Login required"}, status_code=401)
+
+    user = request.session.get("user")
+    rows = get_user_history(user.get("email", ""))
+
+    return {"history": rows}
 
 
 @app.get("/blog", response_class=HTMLResponse)
