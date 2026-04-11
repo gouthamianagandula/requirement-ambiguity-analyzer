@@ -1,3 +1,6 @@
+let barChartInstance = null;
+let doughnutChartInstance = null;
+
 async function analyzeRequirement() {
   const textBox = document.getElementById("requirementText");
   const resultBox = document.getElementById("analysisResult");
@@ -136,6 +139,57 @@ async function analyzeRequirement() {
   }
 }
 
+function renderCharts(totalRequirements, ambiguousCount) {
+  const clearCount = Math.max(totalRequirements - ambiguousCount, 0);
+
+  const barCanvas = document.getElementById("barChart");
+  const doughnutCanvas = document.getElementById("doughnutChart");
+
+  if (barCanvas) {
+    if (barChartInstance) {
+      barChartInstance.destroy();
+    }
+
+    barChartInstance = new Chart(barCanvas, {
+      type: "bar",
+      data: {
+        labels: ["Total", "Ambiguous", "Clear"],
+        datasets: [{
+          label: "Requirements",
+          data: [totalRequirements, ambiguousCount, clearCount]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  }
+
+  if (doughnutCanvas) {
+    if (doughnutChartInstance) {
+      doughnutChartInstance.destroy();
+    }
+
+    doughnutChartInstance = new Chart(doughnutCanvas, {
+      type: "doughnut",
+      data: {
+        labels: ["Ambiguous", "Clear"],
+        datasets: [{
+          data: [ambiguousCount, clearCount]
+        }]
+      },
+      options: {
+        responsive: true
+      }
+    });
+  }
+}
+
 async function loadDashboard() {
   try {
     const response = await fetch("/stats");
@@ -152,6 +206,7 @@ async function loadDashboard() {
     const profileName = document.getElementById("profileName");
     const profileEmail = document.getElementById("profileEmail");
     const profileAvatar = document.querySelector(".profile-avatar");
+    const dashboardSummary = document.getElementById("dashboardSummary");
 
     if (totalRequirements) totalRequirements.innerText = data.total_requirements_analyzed;
     if (ambiguousCount) ambiguousCount.innerText = data.ambiguous_count;
@@ -162,6 +217,20 @@ async function loadDashboard() {
     if (profileAvatar && data.user_name) {
       profileAvatar.innerText = data.user_name.charAt(0).toUpperCase();
     }
+
+    if (dashboardSummary) {
+      dashboardSummary.innerHTML = `
+        <p><strong>Total Requirements:</strong> ${data.total_requirements_analyzed}</p>
+        <p><strong>Ambiguous Count:</strong> ${data.ambiguous_count}</p>
+        <p><strong>Average Score:</strong> ${data.average_score}</p>
+        <p><strong>Last Predicted Label:</strong> ${data.last_predicted_label}</p>
+      `;
+    }
+
+    renderCharts(
+      Number(data.total_requirements_analyzed || 0),
+      Number(data.ambiguous_count || 0)
+    );
   } catch (error) {
     console.log("Dashboard load failed");
   }

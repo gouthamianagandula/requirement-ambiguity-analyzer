@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - Requirement Ambiguity Analyzer</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="analyzer-page">
@@ -21,7 +22,7 @@
 
       <hr class="line" />
 
-      <h2>My Dashboard</h2>
+      <h2>Dashboard</h2>
 
       <div class="dashboard-list">
         <div class="dashboard-item">
@@ -53,15 +54,33 @@
       <a href="/analyzer" class="btn primary-btn full-btn">Go to Analyzer</a>
 
       <br /><br />
+      <a href="/history-page" class="btn primary-btn full-btn">Analyzer History</a>
+
+      <br /><br />
       <a href="/logout" class="btn secondary-btn full-btn">Logout</a>
     </aside>
 
     <main class="right-panel glass-card">
-      <h1>My Analysis History</h1>
-      <p class="subtitle">Only your login history is shown here</p>
+      <h1>Dashboard Analytics</h1>
+      <p class="subtitle">Visual summary of your requirement analysis</p>
 
-      <div id="historyContainer" class="result-box">
-        Loading your history...
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Requirements Overview</h3>
+          <canvas id="barChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h3>Ambiguity Split</h3>
+          <canvas id="doughnutChart"></canvas>
+        </div>
+      </div>
+
+      <div class="analysis-section">
+        <h3>Quick Summary</h3>
+        <div id="dashboardSummary" class="result-box">
+          Loading summary...
+        </div>
       </div>
     </main>
   </div>

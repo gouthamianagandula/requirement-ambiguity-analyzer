@@ -166,11 +166,6 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.left-panel {
-  height: calc(100vh - 48px);
-  overflow-y: auto;
-}
-
 .profile-box {
   display: flex;
   align-items: center;
@@ -196,7 +191,6 @@ body {
   margin: 4px 0 0;
   color: #dbeafe;
   font-size: 14px;
-  word-break: break-word;
 }
 
 .line {
@@ -297,55 +291,30 @@ textarea {
   margin-bottom: 14px;
 }
 
-.sentence-card p {
-  margin: 8px 0;
-}
-
 .sentence-ok {
   color: #86efac;
   font-weight: bold;
 }
 
-.sidebar-history-section {
-  margin-top: 22px;
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
 }
 
-.sidebar-history-section h2 {
-  margin-bottom: 10px;
-}
-
-.sidebar-history-box {
-  max-height: 340px;
-  overflow-y: auto;
+.chart-card {
   background: rgba(15, 23, 42, 0.45);
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 18px;
 }
 
-.sidebar-history-card {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.sidebar-history-card h4 {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
-
-.sidebar-history-card p {
-  margin: 6px 0;
-  font-size: 13px;
-  color: #dbeafe;
+.chart-card h3 {
+  margin-top: 0;
 }
 
 @media (max-width: 900px) {
-  .analyzer-page {
+  .analyzer-page,
+  .chart-grid {
     grid-template-columns: 1fr;
-  }
-
-  .left-panel {
-    height: auto;
   }
 }
