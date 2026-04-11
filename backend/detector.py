@@ -1,179 +1,222 @@
-import json
 import re
 from pathlib import Path
+import json
 
 BASE_DIR = Path(__file__).resolve().parent
-AMBIGUOUS_PATH = BASE_DIR / "data" / "ambiguous_words.json"
+DATA_FILE = BASE_DIR / "data" / "ambiguous_words.json"
 
-with open(AMBIGUOUS_PATH, "r", encoding="utf-8") as f:
-    AMBIGUOUS_WORDS = json.load(f)
+with open(DATA_FILE, "r", encoding="utf-8") as f:
+    FILE_TERMS = json.load(f)
 
-WEAK_TERMS = {
+DEFAULT_TERMS = {
     "should": {
         "category": "Weak Modality",
-        "explanation": "The word 'should' makes the requirement weak or optional in meaning.",
-        "suggestion": "Use 'shall' if the requirement is mandatory.",
+        "explanation": "The word 'should' is weak and not strictly enforceable.",
+        "suggestion": "Use 'shall' for mandatory requirements.",
         "severity": "Medium",
         "replacement": "shall"
     },
     "may": {
-        "category": "Optional Requirement",
-        "explanation": "The word 'may' indicates optional behavior, not a strict requirement.",
-        "suggestion": "Use 'shall' if this behavior is required.",
+        "category": "Optional Language",
+        "explanation": "The word 'may' makes the behavior optional.",
+        "suggestion": "Use 'shall' if it must happen.",
         "severity": "Medium",
         "replacement": "shall"
     },
     "can": {
-        "category": "Weak Modality",
+        "category": "Weak Capability",
         "explanation": "The word 'can' describes possibility, not a strict requirement.",
-        "suggestion": "Rewrite as a direct functional requirement.",
+        "suggestion": "Rewrite using clear system behavior.",
         "severity": "Medium",
         "replacement": "shall be able to"
     },
-    "some": {
-        "category": "Vague Quantity",
-        "explanation": "The quantity is unclear and cannot be tested precisely.",
-        "suggestion": "Replace 'some' with an exact number or range.",
-        "severity": "Medium",
-        "replacement": "[exact number]"
-    },
-    "many": {
-        "category": "Vague Quantity",
-        "explanation": "The quantity is too vague to measure or test.",
-        "suggestion": "Specify the exact count or threshold.",
-        "severity": "Medium",
-        "replacement": "[exact number]"
-    },
-    "few": {
-        "category": "Vague Quantity",
-        "explanation": "The quantity is unclear.",
-        "suggestion": "Use an exact count instead of 'few'.",
-        "severity": "Medium",
-        "replacement": "[exact number]"
-    },
     "fast": {
         "category": "Performance Ambiguity",
-        "explanation": "The term 'fast' is subjective and not measurable.",
-        "suggestion": "Specify measurable response time.",
+        "explanation": "The word 'fast' is subjective and not measurable.",
+        "suggestion": "Specify the response time.",
         "severity": "High",
         "replacement": "within 2 seconds"
     },
     "quick": {
         "category": "Performance Ambiguity",
-        "explanation": "The term 'quick' is vague.",
-        "suggestion": "Specify measurable response time.",
+        "explanation": "The word 'quick' is vague.",
+        "suggestion": "Use measurable timing.",
         "severity": "High",
         "replacement": "within 2 seconds"
     },
-    "efficient": {
-        "category": "Subjective Quality",
-        "explanation": "The word 'efficient' is not measurable by itself.",
-        "suggestion": "Define measurable efficiency criteria.",
-        "severity": "High",
-        "replacement": "[measurable efficiency target]"
+    "slow": {
+        "category": "Performance Ambiguity",
+        "explanation": "The word 'slow' is vague.",
+        "suggestion": "Specify an exact response threshold.",
+        "severity": "Medium",
+        "replacement": "[exact response time]"
     },
     "easy": {
-        "category": "Subjective Quality",
+        "category": "Subjective Language",
         "explanation": "The word 'easy' is subjective.",
-        "suggestion": "State measurable usability requirements.",
+        "suggestion": "Use a measurable usability target.",
         "severity": "High",
-        "replacement": "[measurable usability target]"
+        "replacement": "[measurable usability requirement]"
     },
     "simple": {
-        "category": "Subjective Quality",
+        "category": "Subjective Language",
         "explanation": "The word 'simple' is subjective.",
-        "suggestion": "Describe the exact expected user interaction.",
+        "suggestion": "Describe exact user interaction or flow.",
         "severity": "High",
         "replacement": "[exact interaction steps]"
     },
     "user-friendly": {
-        "category": "Subjective Quality",
-        "explanation": "The phrase 'user-friendly' is subjective and unclear.",
-        "suggestion": "Use measurable usability criteria.",
+        "category": "Subjective Language",
+        "explanation": "The phrase 'user-friendly' is not measurable.",
+        "suggestion": "Use measurable usability requirements.",
         "severity": "High",
-        "replacement": "[measurable usability criteria]"
+        "replacement": "[measurable usability requirement]"
     },
     "reliable": {
         "category": "Quality Ambiguity",
-        "explanation": "The word 'reliable' needs measurable targets.",
-        "suggestion": "Specify uptime, availability, or error rate.",
+        "explanation": "The word 'reliable' needs measurable criteria.",
+        "suggestion": "Specify uptime or failure rate.",
         "severity": "High",
         "replacement": "99.9% uptime"
     },
     "secure": {
         "category": "Security Ambiguity",
-        "explanation": "The word 'secure' is too general.",
-        "suggestion": "Specify encryption, authentication, or access control.",
+        "explanation": "The word 'secure' is too broad.",
+        "suggestion": "Specify authentication, encryption, or access control.",
         "severity": "High",
         "replacement": "[specific security controls]"
     },
-    "robust": {
+    "efficient": {
         "category": "Quality Ambiguity",
-        "explanation": "The word 'robust' is vague.",
-        "suggestion": "Specify fault tolerance or recovery conditions.",
+        "explanation": "The word 'efficient' is subjective.",
+        "suggestion": "Use measurable efficiency criteria.",
         "severity": "High",
-        "replacement": "[fault tolerance target]"
+        "replacement": "[measurable efficiency target]"
     },
     "appropriate": {
         "category": "Subjective Language",
-        "explanation": "The word 'appropriate' is subjective.",
+        "explanation": "The word 'appropriate' is not precise.",
         "suggestion": "Define the exact condition or rule.",
         "severity": "Medium",
         "replacement": "[exact rule]"
     },
     "sufficient": {
-        "category": "Subjective Language",
-        "explanation": "The word 'sufficient' is not measurable.",
-        "suggestion": "State the required quantity or threshold.",
+        "category": "Vague Quantity",
+        "explanation": "The word 'sufficient' is vague.",
+        "suggestion": "Specify the threshold or quantity.",
         "severity": "Medium",
         "replacement": "[exact threshold]"
     },
     "minimal": {
         "category": "Vague Quantity",
-        "explanation": "The word 'minimal' is vague.",
+        "explanation": "The word 'minimal' is unclear.",
         "suggestion": "Specify the exact minimum value.",
         "severity": "Medium",
-        "replacement": "[exact minimum value]"
+        "replacement": "[exact minimum]"
     },
     "maximum": {
         "category": "Vague Quantity",
         "explanation": "The word 'maximum' without a number is incomplete.",
-        "suggestion": "Specify the maximum numeric value.",
+        "suggestion": "Specify the exact maximum value.",
         "severity": "Medium",
-        "replacement": "[exact maximum value]"
+        "replacement": "[exact maximum]"
+    },
+    "many": {
+        "category": "Vague Quantity",
+        "explanation": "The quantity is unclear.",
+        "suggestion": "Use an exact number.",
+        "severity": "Medium",
+        "replacement": "[exact number]"
+    },
+    "some": {
+        "category": "Vague Quantity",
+        "explanation": "The quantity is vague.",
+        "suggestion": "Use an exact number or list.",
+        "severity": "Medium",
+        "replacement": "[exact number]"
+    },
+    "few": {
+        "category": "Vague Quantity",
+        "explanation": "The quantity is vague.",
+        "suggestion": "Use an exact count.",
+        "severity": "Medium",
+        "replacement": "[exact count]"
+    },
+    "as soon as possible": {
+        "category": "Time Ambiguity",
+        "explanation": "The phrase is not measurable.",
+        "suggestion": "Specify a deadline or time limit.",
+        "severity": "High",
+        "replacement": "[exact deadline]"
+    },
+    "if possible": {
+        "category": "Optional Language",
+        "explanation": "The phrase makes the requirement optional and unclear.",
+        "suggestion": "State whether it is mandatory or remove it.",
+        "severity": "Medium",
+        "replacement": "[mandatory rule]"
+    },
+    "where necessary": {
+        "category": "Conditional Ambiguity",
+        "explanation": "The phrase does not define the condition clearly.",
+        "suggestion": "Specify the exact condition.",
+        "severity": "Medium",
+        "replacement": "[exact condition]"
+    },
+    "where applicable": {
+        "category": "Conditional Ambiguity",
+        "explanation": "The condition is unclear.",
+        "suggestion": "Specify when it applies.",
+        "severity": "Medium",
+        "replacement": "[exact condition]"
+    },
+    "etc": {
+        "category": "Incomplete Requirement",
+        "explanation": "The term 'etc' leaves the requirement incomplete.",
+        "suggestion": "List all required items explicitly.",
+        "severity": "High",
+        "replacement": "[full list]"
     }
 }
+
+TERMS = {}
+
+for key, value in FILE_TERMS.items():
+    item = dict(value)
+    if "replacement" not in item:
+        item["replacement"] = item.get("suggestion", "")
+    TERMS[key.lower()] = item
+
+for key, value in DEFAULT_TERMS.items():
+    TERMS[key.lower()] = value
 
 
 def split_into_sentences(text: str):
     text = text.strip()
     if not text:
         return []
-
     parts = re.split(r'(?<=[.!?])\s+|\n+', text)
-    return [part.strip() for part in parts if part.strip()]
+    return [p.strip() for p in parts if p.strip()]
 
 
-def detect(sentence: str):
+def _find_term_matches(text: str, term: str):
+    escaped = re.escape(term)
+    if " " in term or "-" in term:
+        pattern = re.compile(escaped, re.IGNORECASE)
+    else:
+        pattern = re.compile(rf"\b{escaped}\b", re.IGNORECASE)
+    return list(pattern.finditer(text))
+
+
+def detect(text: str):
     results = []
-    sentence_lower = sentence.lower()
 
-    all_terms = {}
-
-    for term, details in AMBIGUOUS_WORDS.items():
-        details_copy = dict(details)
-        if "replacement" not in details_copy:
-            details_copy["replacement"] = details_copy.get("suggestion", "")
-        all_terms[term.lower()] = details_copy
-
-    for term, details in WEAK_TERMS.items():
-        all_terms[term.lower()] = details
-
-    for term, details in all_terms.items():
-        pattern = r"\b" + re.escape(term) + r"\b"
-        for match in re.finditer(pattern, sentence_lower):
+    for term, details in TERMS.items():
+        matches = _find_term_matches(text, term)
+        for match in matches:
             results.append({
-                "term": term,
+                "term": match.group(0),
+                "matched_term": term,
                 "category": details["category"],
                 "explanation": details["explanation"],
                 "suggestion": details["suggestion"],
@@ -190,7 +233,6 @@ def detect(sentence: str):
 def analyze_text(text: str):
     sentences = split_into_sentences(text)
     sentence_results = []
-    all_issues = []
 
     for sentence in sentences:
         issues = detect(sentence)
@@ -198,7 +240,8 @@ def analyze_text(text: str):
             "sentence": sentence,
             "issues": issues
         })
-        all_issues.extend(issues)
+
+    all_issues = detect(text)
 
     return {
         "sentences": sentence_results,

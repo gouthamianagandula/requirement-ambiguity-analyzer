@@ -1,16 +1,20 @@
-def generate_rewrite(sentence, detected_items):
-    rewritten = sentence
+import re
 
-    replacement_map = {}
 
+def generate_rewrite(text, detected_items):
+    rewritten = text
+
+    replacements = []
     for item in detected_items:
-        term = item["term"]
-        replacement = item.get("replacement", "").strip()
-        if replacement:
-            replacement_map[term.lower()] = replacement
+        original = item.get("term", "")
+        replacement = item.get("replacement", "")
+        if original and replacement:
+            replacements.append((original, replacement))
 
-    for term, replacement in replacement_map.items():
-        rewritten = rewritten.replace(term, replacement)
-        rewritten = rewritten.replace(term.capitalize(), replacement.capitalize())
+    replacements.sort(key=lambda x: len(x[0]), reverse=True)
+
+    for original, replacement in replacements:
+        pattern = re.compile(re.escape(original), re.IGNORECASE)
+        rewritten = pattern.sub(replacement, rewritten)
 
     return rewritten
