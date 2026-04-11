@@ -55,7 +55,7 @@
 
     <main class="right-panel glass-card">
       <h1>Requirement Analyzer</h1>
-      <p class="subtitle">Enter any software requirement text and analyze it using AI</p>
+      <p class="subtitle">Enter any sentence or paragraph and analyze it using AI</p>
 
       <textarea id="requirementText" placeholder="Enter requirement here..."></textarea>
 
@@ -65,7 +65,30 @@
         </button>
       </div>
 
-      <div id="analysisResult" class="result-box"></div>
+      <div class="analysis-section">
+        <h3>Highlighted Text</h3>
+        <div id="highlightedOutput" class="result-box result-html-box"></div>
+      </div>
+
+      <div class="analysis-section">
+        <h3>Suggested Rewrite</h3>
+        <div id="rewriteOutput" class="result-box"></div>
+      </div>
+
+      <div class="analysis-section">
+        <h3>Changes Needed</h3>
+        <div id="changesOutput" class="result-box"></div>
+      </div>
+
+      <div class="analysis-section">
+        <h3>Sentence Analysis</h3>
+        <div id="sentenceOutput" class="result-box"></div>
+      </div>
+
+      <div class="analysis-section">
+        <h3>Full Analysis Result</h3>
+        <div id="analysisResult" class="result-box"></div>
+      </div>
     </main>
   </div>
 
