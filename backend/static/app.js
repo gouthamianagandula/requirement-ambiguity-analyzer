@@ -127,6 +127,7 @@ async function analyzeRequirement() {
     }
 
     loadDashboard();
+    loadHistory();
   } catch (error) {
     resultBox.innerText = "Error connecting to backend.";
     if (highlightedOutput) highlightedOutput.innerHTML = "";
@@ -174,28 +175,28 @@ async function loadHistory() {
     return;
   }
 
-  historyContainer.innerHTML = "Loading history...";
+  historyContainer.innerHTML = "Loading your history...";
 
   try {
     const response = await fetch("/history");
     const data = await response.json();
 
     if (!response.ok) {
-      historyContainer.innerHTML = "Failed to load history.";
+      historyContainer.innerHTML = "<p>Could not load your history.</p>";
       return;
     }
 
     if (!data.history || data.history.length === 0) {
-      historyContainer.innerHTML = "<p>No saved history found.</p>";
+      historyContainer.innerHTML = "<p>No saved history for your profile yet.</p>";
       return;
     }
 
-    let historyHtml = "";
+    let html = "";
 
     data.history.forEach((item, index) => {
-      historyHtml += `
+      html += `
         <div class="sentence-card">
-          <h4>Analysis ${index + 1}</h4>
+          <h4>History ${index + 1}</h4>
           <p><strong>Input:</strong> ${item.input_text}</p>
           <p><strong>Predicted Label:</strong> ${item.predicted_label}</p>
           <p><strong>Score:</strong> ${item.score}</p>
@@ -205,13 +206,13 @@ async function loadHistory() {
       `;
     });
 
-    historyContainer.innerHTML = historyHtml;
+    historyContainer.innerHTML = html;
   } catch (error) {
-    historyContainer.innerHTML = "Error loading history.";
+    historyContainer.innerHTML = "<p>Error loading history.</p>";
   }
 }
 
-window.onload = function () {
+document.addEventListener("DOMContentLoaded", function () {
   loadDashboard();
   loadHistory();
-};
+});
