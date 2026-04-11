@@ -55,9 +55,7 @@ oauth.register(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs={
-        "scope": "openid email profile"
-    }
+    client_kwargs={"scope": "openid email profile"},
 )
 
 
@@ -228,3 +226,75 @@ async def get_stats(request: Request):
         "user_name": user.get("name", "User"),
         "user_email": user.get("email", "")
     }
+
+
+@app.get("/blog", response_class=HTMLResponse)
+async def blog_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="blog.html",
+        context={}
+    )
+
+
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="pricing.html",
+        context={}
+    )
+
+
+@app.get("/services", response_class=HTMLResponse)
+async def services_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="services.html",
+        context={}
+    )
+
+
+@app.get("/results", response_class=HTMLResponse)
+async def results_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="results.html",
+        context={}
+    )
+
+
+@app.get("/training", response_class=HTMLResponse)
+async def training_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="training.html",
+        context={}
+    )
+
+
+@app.get("/tools", response_class=HTMLResponse)
+async def tools_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="tools.html",
+        context={}
+    )
+
+
+@app.get("/consulting", response_class=HTMLResponse)
+async def consulting_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="consulting.html",
+        context={}
+    )
+
+
+@app.get("/contact", response_class=HTMLResponse)
+async def contact_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="contact.html",
+        context={}
+    )
