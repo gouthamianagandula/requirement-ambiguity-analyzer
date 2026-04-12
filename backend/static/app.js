@@ -128,9 +128,7 @@ async function analyzeRequirement() {
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
 
-  if (!textBox) {
-    return;
-  }
+  if (!textBox) return;
 
   const text = textBox.value.trim();
 
@@ -151,7 +149,7 @@ async function analyzeRequirement() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ text: text })
+      body: JSON.stringify({ text })
     });
 
     const data = await response.json();
@@ -223,9 +221,7 @@ function renderCharts(totalRequirements, ambiguousCount) {
   const doughnutCanvas = document.getElementById("doughnutChart");
 
   if (barCanvas && typeof Chart !== "undefined") {
-    if (barChartInstance) {
-      barChartInstance.destroy();
-    }
+    if (barChartInstance) barChartInstance.destroy();
 
     barChartInstance = new Chart(barCanvas, {
       type: "bar",
@@ -242,18 +238,14 @@ function renderCharts(totalRequirements, ambiguousCount) {
         responsive: true,
         maintainAspectRatio: true,
         plugins: {
-          legend: {
-            display: false
-          }
+          legend: { display: false }
         }
       }
     });
   }
 
   if (doughnutCanvas && typeof Chart !== "undefined") {
-    if (doughnutChartInstance) {
-      doughnutChartInstance.destroy();
-    }
+    if (doughnutChartInstance) doughnutChartInstance.destroy();
 
     doughnutChartInstance = new Chart(doughnutCanvas, {
       type: "doughnut",
@@ -278,9 +270,7 @@ async function loadDashboard() {
     const response = await fetch("/stats");
     const data = await response.json();
 
-    if (!response.ok) {
-      return;
-    }
+    if (!response.ok) return;
 
     const totalRequirements = document.getElementById("totalRequirements");
     const ambiguousCount = document.getElementById("ambiguousCount");
@@ -321,10 +311,7 @@ async function loadDashboard() {
 
 async function loadHistory() {
   const historyContainer = document.getElementById("historyContainer");
-
-  if (!historyContainer) {
-    return;
-  }
+  if (!historyContainer) return;
 
   historyContainer.innerHTML = "Loading your history...";
 
@@ -343,7 +330,6 @@ async function loadHistory() {
     }
 
     let html = "";
-
     data.history.forEach((item, index) => {
       html += `
         <div class="sentence-card">
@@ -367,9 +353,7 @@ async function loadAdmin() {
   const adminUsers = document.getElementById("adminUsers");
   const adminHistory = document.getElementById("adminHistory");
 
-  if (!adminUsers || !adminHistory) {
-    return;
-  }
+  if (!adminUsers || !adminHistory) return;
 
   try {
     const response = await fetch("/admin-data");
