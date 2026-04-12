@@ -28,6 +28,16 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            email TEXT UNIQUE,
+            password TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -62,3 +72,37 @@ def get_user_history(user_email):
     conn.close()
 
     return [dict(row) for row in rows]
+
+
+def create_user(name, email, password):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO users (name, email, password)
+            VALUES (?, ?, ?)
+        """, (name, email, password))
+        conn.commit()
+        created = True
+    except sqlite3.IntegrityError:
+        created = False
+
+    conn.close()
+    return created
+
+
+def get_user_by_email(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, name, email, password, created_at
+        FROM users
+        WHERE email = ?
+    """, (email,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return dict(row) if row else None

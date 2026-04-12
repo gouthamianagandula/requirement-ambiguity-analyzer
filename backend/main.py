@@ -1,22 +1,30 @@
 import json
 import os
+from io import BytesIO
 from pathlib import Path
 
 from dotenv import load_dotenv
 from authlib.integrations.starlette_client import OAuth
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
+from docx import Document
 
 from backend.detector import analyze_text
 from backend.scorer import calculate_score, get_score_label
 from backend.suggester import generate_rewrite
 from backend.classifier import predict_label
-from backend.database import init_db, save_history, get_user_history
+from backend.database import (
+    init_db,
+    save_history,
+    get_user_history,
+    create_user,
+    get_user_by_email,
+)
 
 load_dotenv()
 
@@ -47,6 +55,17 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 class RequirementInput(BaseModel):
     text: str
+
+
+class EmailLoginInput(BaseModel):
+    email: str
+    password: str
+
+
+class EmailRegisterInput(BaseModel):
+    name: str
+    email: str
+    password: str
 
 
 oauth = OAuth()
@@ -138,6 +157,75 @@ def build_highlight_html(text, issues):
     return "".join(result)
 
 
+def run_analysis(text: str, user: dict):
+    analysis = analyze_text(text)
+    all_issues = analysis["all_issues"]
+
+    score = calculate_score(all_issues)
+    score_label = get_score_label(score)
+    rewritten = generate_rewrite(text, all_issues)
+    ml_label = predict_label(text)
+    highlighted_html = build_highlight_html(text, all_issues)
+
+    changes = []
+    for issue in all_issues:
+        changes.append({
+            "term": issue["term"],
+            "replace_with": issue.get("replacement", ""),
+            "category": issue["category"],
+            "severity": issue["severity"],
+        })
+
+    stats = read_stats()
+    stats["total_requirements_analyzed"] += 1
+
+    if all_issues:
+        stats["ambiguous_count"] += 1
+
+    stats["total_score_sum"] += score
+    stats["average_score"] = round(
+        stats["total_score_sum"] / stats["total_requirements_analyzed"], 2
+    )
+    stats["last_predicted_label"] = ml_label
+
+    write_stats(stats)
+
+    save_history(
+        user_name=user.get("name", "User"),
+        user_email=user.get("email", ""),
+        input_text=text,
+        predicted_label=ml_label,
+        score=score,
+        rewrite=rewritten,
+    )
+
+    return {
+        "input": text,
+        "ml_label": ml_label,
+        "score": score,
+        "score_label": score_label,
+        "issues": all_issues,
+        "rewrite": rewritten,
+        "sentence_analysis": analysis["sentences"],
+        "highlighted_html": highlighted_html,
+        "changes": changes,
+    }
+
+
+def extract_text_from_upload(filename: str, content: bytes) -> str:
+    lower_name = filename.lower()
+
+    if lower_name.endswith(".txt"):
+        return content.decode("utf-8", errors="ignore").strip()
+
+    if lower_name.endswith(".docx"):
+        doc = Document(BytesIO(content))
+        paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+        return "\n".join(paragraphs).strip()
+
+    raise ValueError("Only .txt and .docx files are supported.")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return RedirectResponse(url="/login")
@@ -153,6 +241,43 @@ async def login_page(request: Request):
         name="login.html",
         context={},
     )
+
+
+@app.post("/register-email")
+async def register_email(data: EmailRegisterInput):
+    name = data.name.strip()
+    email = data.email.strip().lower()
+    password = data.password.strip()
+
+    if not name or not email or not password:
+        return JSONResponse({"error": "All fields are required."}, status_code=400)
+
+    created = create_user(name, email, password)
+    if not created:
+        return JSONResponse({"error": "Email already registered."}, status_code=400)
+
+    return {"message": "Registration successful. Now log in."}
+
+
+@app.post("/login-email")
+async def login_email(data: EmailLoginInput, request: Request):
+    email = data.email.strip().lower()
+    password = data.password.strip()
+
+    user = get_user_by_email(email)
+    if not user:
+        return JSONResponse({"error": "User not found."}, status_code=404)
+
+    if user["password"] != password:
+        return JSONResponse({"error": "Wrong password."}, status_code=401)
+
+    request.session["user"] = {
+        "name": user["name"],
+        "email": user["email"],
+        "provider": "Email",
+    }
+
+    return {"message": "Login successful."}
 
 
 @app.get("/login/google")
@@ -238,59 +363,31 @@ async def analyze(data: RequirementInput, request: Request):
 
     text = data.text.strip()
     user = request.session.get("user")
+    return run_analysis(text, user)
 
-    analysis = analyze_text(text)
-    all_issues = analysis["all_issues"]
 
-    score = calculate_score(all_issues)
-    score_label = get_score_label(score)
-    rewritten = generate_rewrite(text, all_issues)
-    ml_label = predict_label(text)
-    highlighted_html = build_highlight_html(text, all_issues)
+@app.post("/analyze-file")
+async def analyze_file(request: Request, file: UploadFile = File(...)):
+    if not is_logged_in(request):
+        return JSONResponse({"error": "Login required"}, status_code=401)
 
-    changes = []
-    for issue in all_issues:
-        changes.append({
-            "term": issue["term"],
-            "replace_with": issue.get("replacement", ""),
-            "category": issue["category"],
-            "severity": issue["severity"],
-        })
+    if not file.filename:
+        return JSONResponse({"error": "No file selected."}, status_code=400)
 
-    stats = read_stats()
-    stats["total_requirements_analyzed"] += 1
+    user = request.session.get("user")
+    content = await file.read()
 
-    if all_issues:
-        stats["ambiguous_count"] += 1
+    try:
+        extracted_text = extract_text_from_upload(file.filename, content)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
 
-    stats["total_score_sum"] += score
-    stats["average_score"] = round(
-        stats["total_score_sum"] / stats["total_requirements_analyzed"], 2
-    )
-    stats["last_predicted_label"] = ml_label
+    if not extracted_text:
+        return JSONResponse({"error": "Uploaded file is empty."}, status_code=400)
 
-    write_stats(stats)
-
-    save_history(
-        user_name=user.get("name", "User"),
-        user_email=user.get("email", ""),
-        input_text=text,
-        predicted_label=ml_label,
-        score=score,
-        rewrite=rewritten,
-    )
-
-    return {
-        "input": text,
-        "ml_label": ml_label,
-        "score": score,
-        "score_label": score_label,
-        "issues": all_issues,
-        "rewrite": rewritten,
-        "sentence_analysis": analysis["sentences"],
-        "highlighted_html": highlighted_html,
-        "changes": changes,
-    }
+    result = run_analysis(extracted_text, user)
+    result["source_file"] = file.filename
+    return result
 
 
 @app.get("/stats")
@@ -318,77 +415,44 @@ async def history(request: Request):
 
     user = request.session.get("user")
     rows = get_user_history(user.get("email", ""))
-
     return {"history": rows}
 
 
 @app.get("/blog", response_class=HTMLResponse)
 async def blog_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="blog.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="blog.html", context={})
 
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="pricing.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="pricing.html", context={})
 
 
 @app.get("/services", response_class=HTMLResponse)
 async def services_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="services.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="services.html", context={})
 
 
 @app.get("/results", response_class=HTMLResponse)
 async def results_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="results.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="results.html", context={})
 
 
 @app.get("/training", response_class=HTMLResponse)
 async def training_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="training.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="training.html", context={})
 
 
 @app.get("/tools", response_class=HTMLResponse)
 async def tools_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="tools.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="tools.html", context={})
 
 
 @app.get("/consulting", response_class=HTMLResponse)
 async def consulting_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="consulting.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="consulting.html", context={})
 
 
 @app.get("/contact", response_class=HTMLResponse)
 async def contact_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="contact.html",
-        context={},
-    )
+    return templates.TemplateResponse(request=request, name="contact.html", context={})

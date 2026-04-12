@@ -9,7 +9,10 @@
 <body>
   <header class="site-header">
     <div class="brand-wrap">
-      <div class="brand-logo">RAA</div>
+      <div class="brand-logo app-logo" aria-label="Logo">
+        <span class="logo-ring"></span>
+        <span class="logo-dot"></span>
+      </div>
       <div class="brand-text">
         <h2>Requirement Ambiguity Analyzer</h2>
       </div>
@@ -27,7 +30,7 @@
     </nav>
 
     <div class="header-actions">
-      <a href="/login" class="header-signin-btn">Sign in</a>
+      <a href="#signin-card" class="header-signin-btn">Sign in</a>
     </div>
   </header>
 
@@ -70,7 +73,7 @@
     </section>
 
     <section class="login-card-wrap">
-      <div class="login-card">
+      <div class="login-card" id="signin-card">
         <div class="login-card-brand">Requirement Ambiguity Analyzer</div>
         <h2>Log in to continue</h2>
 
@@ -83,24 +86,43 @@
           <span>OR</span>
         </div>
 
-        <div class="login-input-group">
-          <input type="email" placeholder="Email" disabled />
-          <input type="password" placeholder="Password" disabled />
+        <div class="login-tabs">
+          <button type="button" class="tab-btn active-tab" onclick="showLoginTab('login')">Email Login</button>
+          <button type="button" class="tab-btn" onclick="showLoginTab('register')">Create Account</button>
         </div>
 
-        <div class="login-row">
-          <label class="remember-me">
-            <input type="checkbox" disabled />
-            <span>Remember me</span>
-          </label>
+        <div id="loginTab" class="auth-tab active-auth-tab">
+          <div class="login-input-group">
+            <input type="email" id="loginEmail" placeholder="Email" />
+            <input type="password" id="loginPassword" placeholder="Password" />
+          </div>
 
-          <a href="/contact" class="forgot-link">Need help?</a>
+          <div class="login-row">
+            <label class="remember-me">
+              <input type="checkbox" />
+              <span>Remember me</span>
+            </label>
+
+            <a href="/contact" class="forgot-link">Need help?</a>
+          </div>
+
+          <button class="email-login-btn active-submit-btn" onclick="loginWithEmail()">LOG IN</button>
         </div>
 
-        <button class="email-login-btn" disabled>LOG IN</button>
+        <div id="registerTab" class="auth-tab">
+          <div class="login-input-group">
+            <input type="text" id="registerName" placeholder="Full Name" />
+            <input type="email" id="registerEmail" placeholder="Email" />
+            <input type="password" id="registerPassword" placeholder="Password" />
+          </div>
+
+          <button class="email-login-btn active-submit-btn" onclick="registerWithEmail()">CREATE ACCOUNT</button>
+        </div>
+
+        <div id="authMessage" class="auth-message"></div>
 
         <p class="login-footer-text">
-          Secure sign-in is currently enabled with Google.
+          Secure sign-in is enabled with Google and Email Password.
         </p>
       </div>
     </section>

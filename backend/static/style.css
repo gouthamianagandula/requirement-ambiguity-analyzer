@@ -49,7 +49,7 @@ body.dark-theme {
   --header-text: #ffffff;
   --hero-bg: #111827;
   --hero-text: #cbd5e1;
-  --panel-bg: rgba(2, 6, 23, 0.8);
+  --panel-bg: rgba(2, 6, 23, 0.82);
   --panel-text: #f8fafc;
   --muted-text: #cbd5e1;
   --box-bg: rgba(30, 41, 59, 0.9);
@@ -61,6 +61,10 @@ body.dark-theme {
   --app-bg: linear-gradient(135deg, #020617, #0f172a, #1e293b);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
@@ -69,6 +73,7 @@ body {
   color: var(--text-main);
 }
 
+/* header */
 .site-header {
   height: 84px;
   display: flex;
@@ -89,13 +94,34 @@ body {
   width: 54px;
   height: 54px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 18px;
-  color: white;
+}
+
+.app-logo {
+  position: relative;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+.logo-ring {
+  width: 28px;
+  height: 28px;
+  border: 4px solid white;
+  border-top-color: #f59e0b;
+  border-right-color: #60a5fa;
+  border-radius: 50%;
+  display: block;
+}
+
+.logo-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  top: 22px;
+  left: 22px;
 }
 
 .brand-text h2 {
@@ -134,6 +160,7 @@ body {
   background: #1d4ed8;
 }
 
+/* professional login page */
 .modern-login-page {
   position: relative;
   min-height: calc(100vh - 84px);
@@ -257,7 +284,6 @@ body {
   border-radius: 24px;
   padding: 34px;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
-
 }
 
 .login-card-brand {
@@ -338,6 +364,36 @@ body {
   left: 100%;
 }
 
+.login-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.active-tab {
+  background: #2563eb;
+  color: white;
+}
+
+.auth-tab {
+  display: none;
+}
+
+.active-auth-tab {
+  display: block;
+}
+
 .login-input-group {
   display: flex;
   flex-direction: column;
@@ -350,7 +406,7 @@ body {
   border-radius: 12px;
   border: 1px solid #cbd5e1;
   background: #f8fafc;
-  color: #64748b;
+  color: #334155;
   font-size: 15px;
 }
 
@@ -385,6 +441,18 @@ body {
   color: white;
   font-weight: bold;
   letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.active-submit-btn {
+  background: #2563eb;
+}
+
+.auth-message {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 14px;
+  color: #1d4ed8;
 }
 
 .login-footer-text {
@@ -394,6 +462,7 @@ body {
   font-size: 14px;
 }
 
+/* old landing classes kept */
 .landing-main {
   min-height: calc(100vh - 84px);
   display: flex;
@@ -436,6 +505,7 @@ body {
   gap: 16px;
 }
 
+/* buttons */
 .landing-btn,
 .btn {
   display: inline-block;
@@ -454,6 +524,10 @@ body {
   background: linear-gradient(135deg, #ea4335, #fbbc05);
 }
 
+.microsoft-btn {
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+}
+
 .primary-btn {
   background: var(--primary-btn);
 }
@@ -466,6 +540,7 @@ body {
   width: 100%;
 }
 
+/* app pages */
 .analyzer-page {
   min-height: 100vh;
   display: grid;
@@ -508,6 +583,7 @@ body {
   margin: 4px 0 0;
   color: var(--muted-text);
   font-size: 14px;
+  word-break: break-word;
 }
 
 .line {
@@ -550,6 +626,13 @@ textarea {
   color: var(--textarea-text);
 }
 
+input[type="file"] {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  color: var(--panel-text);
+}
+
 .top-actions {
   margin: 18px 0;
 }
@@ -560,6 +643,7 @@ textarea {
   border-radius: 14px;
   margin-top: 10px;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .highlight-word {
@@ -608,6 +692,10 @@ textarea {
   border-radius: 14px;
   padding: 14px;
   margin-bottom: 14px;
+}
+
+.sentence-card p {
+  margin: 8px 0;
 }
 
 .sentence-ok {
