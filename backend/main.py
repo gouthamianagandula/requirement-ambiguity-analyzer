@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 from docx import Document
+from pypdf import PdfReader
 
 from backend.detector import analyze_text
 from backend.scorer import calculate_score, get_score_label
@@ -24,6 +25,8 @@ from backend.database import (
     get_user_history,
     create_user,
     get_user_by_email,
+    get_all_history,
+    get_all_users,
 )
 
 load_dotenv()
@@ -136,21 +139,15 @@ def build_highlight_html(text, issues):
 
         result.append(text[last_index:start])
 
-        highlighted_word = text[start:end]
+        word = text[start:end]
         replacement = issue.get("replacement", "")
-        suggestion = issue.get("suggestion", "")
-        severity = issue.get("severity", "Medium")
+        category = issue.get("category", "")
+        tooltip = f"{word} → {replacement} ({category})"
 
-        tooltip = (
-            f"{issue['term']} | {issue['category']} | {severity} | "
-            f"Replace with: {replacement or suggestion}"
+        result.append(
+            f"<span class='highlight-word' title='{tooltip}'>{word}</span>"
         )
 
-        span = (
-            f"<span class='highlight-word' title=\"{tooltip}\">"
-            f"{highlighted_word}</span>"
-        )
-        result.append(span)
         last_index = end
 
     result.append(text[last_index:])
@@ -223,7 +220,16 @@ def extract_text_from_upload(filename: str, content: bytes) -> str:
         paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         return "\n".join(paragraphs).strip()
 
-    raise ValueError("Only .txt and .docx files are supported.")
+    if lower_name.endswith(".pdf"):
+        reader = PdfReader(BytesIO(content))
+        pages = []
+        for page in reader.pages:
+            page_text = page.extract_text() or ""
+            if page_text.strip():
+                pages.append(page_text.strip())
+        return "\n".join(pages).strip()
+
+    raise ValueError("Only .txt, .docx, and .pdf files are supported.")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -354,6 +360,31 @@ async def dashboard_page(request: Request):
         name="dashboard.html",
         context={"user": user},
     )
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    if not is_logged_in(request):
+        return RedirectResponse(url="/login")
+
+    user = request.session.get("user")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin.html",
+        context={"user": user},
+    )
+
+
+@app.get("/admin-data")
+async def admin_data(request: Request):
+    if not is_logged_in(request):
+        return JSONResponse({"error": "Login required"}, status_code=401)
+
+    return {
+        "users": get_all_users(),
+        "history": get_all_history(),
+    }
 
 
 @app.post("/analyze")
