@@ -14,6 +14,8 @@ VAGUE_REPLACEMENTS = {
     "many": "[exact number]",
     "some": "[exact number]",
     "few": "[exact count]",
+    "secure": "[specific security controls]",
+    "reliable": "[measurable reliability target]",
 }
 
 PRONOUN_REPLACEMENTS = {
@@ -81,6 +83,7 @@ def _apply_issue_replacements(text, detected_items):
             rewritten = re.sub(r"\bcannot not\b", "cannot", rewritten, flags=re.IGNORECASE)
             rewritten = re.sub(r"\bcan't not\b", "cannot", rewritten, flags=re.IGNORECASE)
             rewritten = re.sub(r"\bnot no\b", "no", rewritten, flags=re.IGNORECASE)
+            rewritten = re.sub(r"\bnever no\b", "no", rewritten, flags=re.IGNORECASE)
 
         elif issue_type in {"grammar", "wrong_verb_form", "spelling", "punctuation", "casing", "style"}:
             if replacement:
@@ -116,6 +119,7 @@ def _normalize_requirement_style(text: str) -> str:
     text = text.replace("/", " or ")
     text = re.sub(r"\s*;\s*", ". ", text)
     text = re.sub(r"\s*,\s*which\s+", ". This ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*,\s*and\s+", ", and ", text)
     text = _clean_spaces(text)
 
     if text:

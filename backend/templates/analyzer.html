@@ -1,137 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Analyzer - Requirement Ambiguity Analyzer</title>
-  <link rel="stylesheet" href="/static/style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Requirement Ambiguity Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body>
-  <div class="analyzer-page">
-    <aside class="left-panel glass-card">
-      <div class="profile-box">
-        <div class="profile-avatar">
-          {{ user.name[0] if user and user.name else 'U' }}
-        </div>
-        <div>
-          <h3 id="profileName">{{ user.name if user else '' }}</h3>
-          <p id="profileEmail">{{ user.email if user else '' }}</p>
-        </div>
-      </div>
+<body class="app-body">
+    <div class="dashboard-shell">
+        <aside class="sidebar">
+            <div class="brand-block">
+                <div class="brand-logo">RAA</div>
+                <div>
+                    <h2>Requirement Ambiguity Analyzer</h2>
+                    <p>Analyze and rewrite requirements</p>
+                </div>
+            </div>
 
-      <hr class="line" />
+            <nav class="side-nav">
+                <a href="/analyzer" class="active">Analyzer</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/history-page">History</a>
+                <a href="/admin">Admin</a>
+                <a href="/logout">Logout</a>
+            </nav>
+        </aside>
 
-      <h2>Dashboard</h2>
+        <main class="main-panel">
+            <header class="topbar glass">
+                <div>
+                    <h1>Requirement Analyzer</h1>
+                    <p>Highlight wrong words, correct the sentence, and provide a better rewrite.</p>
+                </div>
+            </header>
 
-      <div class="dashboard-list">
-        <div class="dashboard-item">
-          <span>Total Requirements</span>
-          <strong id="totalRequirements">0</strong>
-        </div>
+            <section class="panel glass input-panel">
+                <form id="analyzerForm" class="analyzer-form">
+                    <label for="requirementText" class="field-label">Requirement Text</label>
+                    <textarea
+                        id="requirementText"
+                        name="text"
+                        placeholder="Example: the system should quickly process the file and it should notify user soon"
+                    ></textarea>
 
-        <div class="dashboard-item">
-          <span>Ambiguous Count</span>
-          <strong id="ambiguousCount">0</strong>
-        </div>
+                    <div class="upload-row">
+                        <div class="upload-box">
+                            <label for="fileInput" class="field-label">Upload File (.txt, .docx, .pdf)</label>
+                            <input id="fileInput" name="file" type="file" accept=".txt,.docx,.pdf" />
+                        </div>
 
-        <div class="dashboard-item">
-          <span>Average Score</span>
-          <strong id="averageScore">0</strong>
-        </div>
+                        <button id="analyzeBtn" type="submit" class="primary-btn">
+                            Analyze
+                        </button>
+                    </div>
+                </form>
 
-        <div class="dashboard-item">
-          <span>Last Predicted Label</span>
-          <strong id="lastLabel">None</strong>
-        </div>
-      </div>
+                <div id="loadingWrap" class="loading-wrap hidden">
+                    <div class="loader-ring"></div>
+                    <p>Running analysis...</p>
+                </div>
+            </section>
 
-      <button type="button" class="btn primary-btn full-btn" onclick="loadDashboard()">
-        Refresh Dashboard
-      </button>
+            <section id="emptyState" class="panel glass empty-state">
+                <h3>Ready</h3>
+                <p>Enter a sentence or upload a file to analyze.</p>
+            </section>
 
-      <br /><br />
+            <section id="resultsWrap" class="results-stack hidden">
+                <div class="panel glass result-card">
+                    <div class="section-head">
+                        <h3>Highlighted Text</h3>
+                    </div>
+                    <div id="highlightedTextBox" class="result-box"></div>
+                </div>
 
-      <button type="button" class="btn primary-btn full-btn" onclick="toggleTheme()">
-        Toggle Theme
-      </button>
+                <div class="panel glass result-card">
+                    <div class="section-head">
+                        <h3>Corrected Sentence</h3>
+                    </div>
+                    <div id="correctedTextBox" class="result-box"></div>
+                </div>
 
-      <br /><br />
+                <div class="panel glass result-card">
+                    <div class="section-head">
+                        <h3>Professional Rewrite</h3>
+                    </div>
+                    <div id="rewriteTextBox" class="result-box"></div>
+                </div>
+            </section>
+        </main>
+    </div>
 
-      <a href="/dashboard" class="btn primary-btn full-btn">
-        Dashboard Page
-      </a>
-
-      <br /><br />
-
-      <a href="/history-page" class="btn primary-btn full-btn">
-        Analyzer History
-      </a>
-
-      <br /><br />
-
-      <a href="/admin" class="btn primary-btn full-btn">
-        Admin Panel
-      </a>
-
-      <br /><br />
-
-      <a href="/logout" class="btn secondary-btn full-btn">
-        Logout
-      </a>
-    </aside>
-
-    <main class="right-panel glass-card">
-      <h1>Requirement Analyzer</h1>
-      <p class="subtitle">
-        Enter any sentence or paragraph and analyze it using AI
-      </p>
-
-      <textarea id="requirementText" placeholder="Enter requirement here..."></textarea>
-
-      <div class="top-actions">
-        <button type="button" class="btn primary-btn" onclick="analyzeRequirement()">
-          Analyze Requirement
-        </button>
-      </div>
-
-      <div class="analysis-section">
-        <h3>Upload Document</h3>
-        <label for="fileInput">Select a document file</label>
-        <input type="file" id="fileInput" accept=".txt,.docx,.pdf">
-        <div class="top-actions">
-          <button type="button" class="btn primary-btn" onclick="analyzeUploadedFile()">
-            Analyze File
-          </button>
-        </div>
-      </div>
-
-      <div class="analysis-section">
-        <h3>Highlighted Text</h3>
-        <div id="highlightedOutput" class="result-box result-html-box"></div>
-      </div>
-
-      <div class="analysis-section">
-        <h3>Suggested Rewrite</h3>
-        <div id="rewriteOutput" class="result-box"></div>
-      </div>
-
-      <div class="analysis-section">
-        <h3>Changes Needed</h3>
-        <div id="changesOutput" class="result-box"></div>
-      </div>
-
-      <div class="analysis-section">
-        <h3>Sentence Analysis</h3>
-        <div id="sentenceOutput" class="result-box"></div>
-      </div>
-
-      <div class="analysis-section">
-        <h3>Full Analysis Result</h3>
-        <div id="analysisResult" class="result-box"></div>
-      </div>
-    </main>
-  </div>
-
-  <script src="/static/app.js"></script>
+    <script src="/static/app.js"></script>
 </body>
 </html>

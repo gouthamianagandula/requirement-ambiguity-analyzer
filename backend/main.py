@@ -125,11 +125,19 @@ def is_logged_in(request: Request):
 
 def get_highlight_class(issue):
     issue_type = issue.get("issue_type", "")
+
     if issue_type in {"grammar", "wrong_verb_form", "repeated_word"}:
         return "highlight-grammar"
     if issue_type == "spelling":
         return "highlight-spelling"
-    if issue_type in {"ambiguity", "unclear_pronoun", "multiple_meaning", "ambiguous_structure", "confusing_construction", "double_negative"}:
+    if issue_type in {
+        "ambiguity",
+        "unclear_pronoun",
+        "multiple_meaning",
+        "ambiguous_structure",
+        "confusing_construction",
+        "double_negative"
+    }:
         return "highlight-ambiguity"
     return "highlight-style"
 
@@ -181,18 +189,6 @@ def run_analysis(text: str, user: dict):
     ml_label = predict_label(text)
     highlighted_html = build_highlight_html(text, all_issues)
 
-    changes = []
-    for issue in all_issues:
-        changes.append({
-            "term": issue["term"],
-            "replace_with": issue.get("replacement", ""),
-            "category": issue["category"],
-            "severity": issue["severity"],
-            "suggestion": issue.get("suggestion", ""),
-            "issue_type": issue.get("issue_type", ""),
-            "meanings": issue.get("meanings", []),
-        })
-
     stats = read_stats()
     stats["total_requirements_analyzed"] += 1
 
@@ -204,7 +200,6 @@ def run_analysis(text: str, user: dict):
         stats["total_score_sum"] / stats["total_requirements_analyzed"], 2
     )
     stats["last_predicted_label"] = ml_label
-
     write_stats(stats)
 
     save_history(
@@ -218,17 +213,12 @@ def run_analysis(text: str, user: dict):
 
     return {
         "input": text,
-        "ml_label": ml_label,
+        "highlighted_html": highlighted_html,
+        "corrected_text": analysis.get("corrected_text", text),
+        "rewrite": rewritten,
         "score": score,
         "score_label": score_label,
-        "issues": all_issues,
-        "rewrite": rewritten,
-        "corrected_text": analysis.get("corrected_text", text),
-        "summary": analysis.get("summary", ""),
-        "stats": analysis.get("stats", {}),
-        "sentence_analysis": analysis["sentences"],
-        "highlighted_html": highlighted_html,
-        "changes": changes,
+        "ml_label": ml_label,
     }
 
 
@@ -330,11 +320,6 @@ async def auth_google(request: Request):
     }
 
     return RedirectResponse(url="/analyzer")
-
-
-@app.get("/login/microsoft")
-async def login_microsoft():
-    return RedirectResponse(url="/login")
 
 
 @app.get("/logout")

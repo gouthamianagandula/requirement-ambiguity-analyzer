@@ -65,9 +65,9 @@ DEFAULT_TERMS = {
     "soon": {
         "category": "Time Ambiguity",
         "explanation": "The word is not measurable.",
-        "suggestion": "Specify exact deadline.",
+        "suggestion": "Specify exact deadline or time.",
         "severity": "High",
-        "replacement": "by [exact date/time]",
+        "replacement": "within [exact time]",
     },
     "easy": {
         "category": "Usability Ambiguity",
@@ -102,7 +102,7 @@ DEFAULT_TERMS = {
         "explanation": "The phrase is ambiguous.",
         "suggestion": "Choose either 'and' or 'or'.",
         "severity": "High",
-        "replacement": "[choose and or or]",
+        "replacement": "[choose one]",
     },
     "may": {
         "category": "Weak Language",
@@ -229,7 +229,7 @@ DEFAULT_TERMS = {
         "suggestion": "Specify when it applies.",
         "severity": "Medium",
         "replacement": "[exact condition]",
-    },
+    }
 }
 
 TERMS = {}
@@ -422,7 +422,7 @@ def detect_double_negatives(sentence: str, offset: int = 0) -> List[Dict[str, An
             start=offset + first[1],
             end=offset + last[2],
             category="Double Negative",
-            explanation="The sentence contains multiple negative terms and may reverse or confuse the meaning.",
+            explanation="The sentence contains multiple negative terms and may confuse the meaning.",
             suggestion="Rewrite the sentence using one clear negative or a positive form.",
             severity="High",
             replacement="",
@@ -465,8 +465,8 @@ def detect_multiple_meanings(sentence: str, offset: int = 0) -> List[Dict[str, A
                     start=offset + start,
                     end=offset + end,
                     category="Multiple Meanings",
-                    explanation="This word can have multiple meanings and may confuse the reader in a requirement sentence.",
-                    suggestion="Replace it with a more precise term if the context is technical or strict.",
+                    explanation="This word can have multiple meanings and may confuse the reader.",
+                    suggestion="Replace it with a more precise term if needed.",
                     severity="Medium",
                     replacement="",
                     issue_type="multiple_meaning",
@@ -758,7 +758,7 @@ def analyze_text(text: str) -> Dict[str, Any]:
 
     stats = {
         "grammar": sum(1 for x in all_issues if x["issue_type"] in {"grammar", "wrong_verb_form", "punctuation", "casing", "style", "repeated_word"}),
-        "ambiguity": sum(1 for x in all_issues if x["issue_type"] in {"ambiguity", "unclear_pronoun", "multiple_meaning", "ambiguous_structure", "confusing_construction"}),
+        "ambiguity": sum(1 for x in all_issues if x["issue_type"] in {"ambiguity", "unclear_pronoun", "multiple_meaning", "ambiguous_structure", "confusing_construction", "double_negative"}),
         "spelling": sum(1 for x in all_issues if x["issue_type"] == "spelling"),
         "total": len(all_issues),
     }
@@ -767,6 +767,6 @@ def analyze_text(text: str) -> Dict[str, Any]:
         "sentences": sentence_results,
         "all_issues": all_issues,
         "corrected_text": corrected_text,
-        "summary": f"Detected {len(all_issues)} issue(s): {stats['grammar']} grammar/style, {stats['ambiguity']} ambiguity, {stats['spelling']} spelling.",
+        "summary": f"Detected {len(all_issues)} issue(s).",
         "stats": stats,
     }

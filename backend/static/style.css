@@ -17,10 +17,17 @@
   --danger: #ef4444;
   --border: rgba(255, 255, 255, 0.12);
   --shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
-  --highlight-bg: #facc15;
-  --highlight-text: #111827;
   --input-bg: rgba(255, 255, 255, 0.08);
   --panel-gradient: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(124, 58, 237, 0.08));
+
+  --highlight-grammar-bg: rgba(239, 68, 68, 0.18);
+  --highlight-grammar-line: #ef4444;
+  --highlight-spelling-bg: rgba(245, 158, 11, 0.18);
+  --highlight-spelling-line: #f59e0b;
+  --highlight-ambiguity-bg: rgba(124, 58, 237, 0.18);
+  --highlight-ambiguity-line: #7c3aed;
+  --highlight-style-bg: rgba(59, 130, 246, 0.18);
+  --highlight-style-line: #3b82f6;
 }
 
 body.light-theme {
@@ -634,6 +641,7 @@ input[type="file"] {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--text-main);
+  line-height: 1.9;
 }
 
 .result-html-box {
@@ -641,32 +649,36 @@ input[type="file"] {
 }
 
 .highlight-word {
-  background: var(--highlight-bg);
-  color: var(--highlight-text);
   padding: 2px 6px;
   border-radius: 8px;
   font-weight: bold;
+  transition: 0.2s ease;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
 }
 
-.changes-list,
-.sentence-issue-list {
-  margin: 0;
-  padding-left: 20px;
+.highlight-word:hover {
+  filter: brightness(1.08);
 }
 
-.changes-list li,
-.sentence-issue-list li {
-  margin-bottom: 12px;
+.highlight-word.highlight-grammar {
+  background: var(--highlight-grammar-bg);
+  text-decoration: underline wavy var(--highlight-grammar-line);
 }
 
-.replacement-text {
-  color: #93c5fd;
-  font-weight: bold;
+.highlight-word.highlight-spelling {
+  background: var(--highlight-spelling-bg);
+  text-decoration: underline wavy var(--highlight-spelling-line);
 }
 
-.change-meta {
-  font-size: 13px;
-  color: var(--text-soft);
+.highlight-word.highlight-ambiguity {
+  background: var(--highlight-ambiguity-bg);
+  text-decoration: underline wavy var(--highlight-ambiguity-line);
+}
+
+.highlight-word.highlight-style {
+  background: var(--highlight-style-bg);
+  text-decoration: underline wavy var(--highlight-style-line);
 }
 
 .sentence-card {
@@ -683,11 +695,6 @@ input[type="file"] {
 
 .sentence-card p {
   margin: 8px 0;
-}
-
-.sentence-ok {
-  color: #86efac;
-  font-weight: bold;
 }
 
 /* charts */

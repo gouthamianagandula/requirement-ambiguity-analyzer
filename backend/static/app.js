@@ -104,120 +104,40 @@ async function registerWithEmail() {
   }
 }
 
-function renderAnalysisData(data) {
-  const resultBox = document.getElementById("analysisResult");
+function renderAnalyzerResult(data) {
   const highlightedOutput = document.getElementById("highlightedOutput");
+  const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
-  const changesOutput = document.getElementById("changesOutput");
-  const sentenceOutput = document.getElementById("sentenceOutput");
-
-  let output = "";
-  output += "Input: " + (data.input || "") + "\n\n";
-
-  if (data.source_file) {
-    output += "Source File: " + data.source_file + "\n";
-  }
-
-  output += "Predicted Label: " + (data.ml_label || "") + "\n";
-  output += "Score: " + (data.score ?? "") + "\n";
-  output += "Score Label: " + (data.score_label || "") + "\n\n";
-  output += "Detected Issues:\n";
-
-  if (!data.issues || data.issues.length === 0) {
-    output += "No ambiguity detected.";
-  } else {
-    data.issues.forEach((item, index) => {
-      output += "\n" + (index + 1) + ". Term: " + item.term + "\n";
-      output += "   Category: " + item.category + "\n";
-      output += "   Explanation: " + item.explanation + "\n";
-      output += "   Suggestion: " + item.suggestion + "\n";
-      output += "   Severity: " + item.severity + "\n";
-    });
-  }
-
-  if (resultBox) {
-    resultBox.innerText = output;
-  }
 
   if (highlightedOutput) {
     highlightedOutput.innerHTML = data.highlighted_html || "No highlighted issues.";
   }
 
+  if (correctedOutput) {
+    correctedOutput.innerText = data.corrected_text || data.input || "No corrected sentence.";
+  }
+
   if (rewriteOutput) {
-    rewriteOutput.innerText = data.rewrite || "No rewrite available.";
-  }
-
-  if (changesOutput) {
-    if (!data.changes || data.changes.length === 0) {
-      changesOutput.innerHTML = "<p>No changes needed.</p>";
-    } else {
-      let changesHtml = "<ul class='changes-list'>";
-      data.changes.forEach((item) => {
-        changesHtml += `
-          <li>
-            <strong>${item.term}</strong>
-            → <span class="replacement-text">${item.replace_with || "See suggestion"}</span>
-            <br>
-            <span class="change-meta">${item.category} | ${item.severity}</span>
-          </li>
-        `;
-      });
-      changesHtml += "</ul>";
-      changesOutput.innerHTML = changesHtml;
-    }
-  }
-
-  if (sentenceOutput) {
-    if (!data.sentence_analysis || data.sentence_analysis.length === 0) {
-      sentenceOutput.innerHTML = "<p>No sentence analysis available.</p>";
-    } else {
-      let sentenceHtml = "";
-      data.sentence_analysis.forEach((item, index) => {
-        sentenceHtml += `
-          <div class="sentence-card">
-            <h4>Sentence ${index + 1}</h4>
-            <p>${item.sentence}</p>
-        `;
-
-        if (!item.issues || item.issues.length === 0) {
-          sentenceHtml += `<p class="sentence-ok">No ambiguity detected.</p>`;
-        } else {
-          sentenceHtml += "<ul class='sentence-issue-list'>";
-          item.issues.forEach((issue) => {
-            sentenceHtml += `
-              <li>
-                <strong>${issue.term}</strong> - ${issue.category}
-                <br>
-                Replace with: <span class="replacement-text">${issue.replacement || issue.suggestion}</span>
-              </li>
-            `;
-          });
-          sentenceHtml += "</ul>";
-        }
-
-        sentenceHtml += "</div>";
-      });
-      sentenceOutput.innerHTML = sentenceHtml;
-    }
+    rewriteOutput.innerText = data.rewrite || data.corrected_text || data.input || "No rewrite available.";
   }
 }
 
 async function analyzeRequirement() {
   const textBox = document.getElementById("requirementText");
-  const resultBox = document.getElementById("analysisResult");
+  const highlightedOutput = document.getElementById("highlightedOutput");
 
-  if (!textBox || !resultBox) {
+  if (!textBox || !highlightedOutput) {
     return;
   }
 
   const text = textBox.value.trim();
 
   if (!text) {
-    resultBox.innerText = "Enter requirement text first.";
+    highlightedOutput.innerText = "Enter requirement text first.";
     return;
   }
 
-  resultBox.innerText = "Analyzing...";
+  highlightedOutput.innerText = "Analyzing...";
 
   try {
     const response = await fetch("/analyze", {
@@ -231,24 +151,24 @@ async function analyzeRequirement() {
     const data = await response.json();
 
     if (!response.ok) {
-      resultBox.innerText = data.error || "Analysis failed.";
+      highlightedOutput.innerText = data.error || "Analysis failed.";
       return;
     }
 
-    renderAnalysisData(data);
+    renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    resultBox.innerText = "Error connecting to backend.";
+    highlightedOutput.innerText = "Error connecting to backend.";
   }
 }
 
 async function analyzeUploadedFile() {
   const fileInput = document.getElementById("fileInput");
-  const resultBox = document.getElementById("analysisResult");
+  const highlightedOutput = document.getElementById("highlightedOutput");
 
   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-    if (resultBox) {
-      resultBox.innerText = "Select a .txt, .docx, or .pdf file first.";
+    if (highlightedOutput) {
+      highlightedOutput.innerText = "Select a .txt, .docx, or .pdf file first.";
     }
     return;
   }
@@ -256,8 +176,8 @@ async function analyzeUploadedFile() {
   const formData = new FormData();
   formData.append("file", fileInput.files[0]);
 
-  if (resultBox) {
-    resultBox.innerText = "Analyzing uploaded file...";
+  if (highlightedOutput) {
+    highlightedOutput.innerText = "Analyzing uploaded file...";
   }
 
   try {
@@ -269,17 +189,17 @@ async function analyzeUploadedFile() {
     const data = await response.json();
 
     if (!response.ok) {
-      if (resultBox) {
-        resultBox.innerText = data.error || "File analysis failed.";
+      if (highlightedOutput) {
+        highlightedOutput.innerText = data.error || "File analysis failed.";
       }
       return;
     }
 
-    renderAnalysisData(data);
+    renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    if (resultBox) {
-      resultBox.innerText = "Error uploading file.";
+    if (highlightedOutput) {
+      highlightedOutput.innerText = "Error uploading file.";
     }
   }
 }
