@@ -570,10 +570,36 @@ body {
 
 .primary-btn {
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
 }
 
 .secondary-btn {
   background: linear-gradient(135deg, #475569, #64748b);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.secondary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
 }
 
 .full-btn {
@@ -621,6 +647,9 @@ input[type="file"] {
 
 .top-actions {
   margin: 18px 0;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .analysis-section {
@@ -787,5 +816,9 @@ input[type="file"] {
   .left-panel {
     position: static;
     height: auto;
+  }
+
+  .top-actions {
+    flex-direction: column;
   }
 }

@@ -104,6 +104,8 @@ async function registerWithEmail() {
   }
 }
 
+/* ---------------- Analyzer Result Rendering ---------------- */
+
 function renderAnalyzerResult(data) {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
@@ -125,19 +127,25 @@ function renderAnalyzerResult(data) {
 async function analyzeRequirement() {
   const textBox = document.getElementById("requirementText");
   const highlightedOutput = document.getElementById("highlightedOutput");
+  const correctedOutput = document.getElementById("correctedOutput");
+  const rewriteOutput = document.getElementById("rewriteOutput");
 
-  if (!textBox || !highlightedOutput) {
+  if (!textBox) {
     return;
   }
 
   const text = textBox.value.trim();
 
   if (!text) {
-    highlightedOutput.innerText = "Enter requirement text first.";
+    if (highlightedOutput) highlightedOutput.innerText = "Enter requirement text first.";
+    if (correctedOutput) correctedOutput.innerText = "";
+    if (rewriteOutput) rewriteOutput.innerText = "";
     return;
   }
 
-  highlightedOutput.innerText = "Analyzing...";
+  if (highlightedOutput) highlightedOutput.innerText = "Analyzing...";
+  if (correctedOutput) correctedOutput.innerText = "Analyzing...";
+  if (rewriteOutput) rewriteOutput.innerText = "Analyzing...";
 
   try {
     const response = await fetch("/analyze", {
@@ -151,34 +159,40 @@ async function analyzeRequirement() {
     const data = await response.json();
 
     if (!response.ok) {
-      highlightedOutput.innerText = data.error || "Analysis failed.";
+      if (highlightedOutput) highlightedOutput.innerText = data.error || "Analysis failed.";
+      if (correctedOutput) correctedOutput.innerText = "";
+      if (rewriteOutput) rewriteOutput.innerText = "";
       return;
     }
 
     renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    highlightedOutput.innerText = "Error connecting to backend.";
+    if (highlightedOutput) highlightedOutput.innerText = "Error connecting to backend.";
+    if (correctedOutput) correctedOutput.innerText = "";
+    if (rewriteOutput) rewriteOutput.innerText = "";
   }
 }
 
 async function analyzeUploadedFile() {
   const fileInput = document.getElementById("fileInput");
   const highlightedOutput = document.getElementById("highlightedOutput");
+  const correctedOutput = document.getElementById("correctedOutput");
+  const rewriteOutput = document.getElementById("rewriteOutput");
 
   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-    if (highlightedOutput) {
-      highlightedOutput.innerText = "Select a .txt, .docx, or .pdf file first.";
-    }
+    if (highlightedOutput) highlightedOutput.innerText = "Select a .txt, .docx, or .pdf file first.";
+    if (correctedOutput) correctedOutput.innerText = "";
+    if (rewriteOutput) rewriteOutput.innerText = "";
     return;
   }
 
   const formData = new FormData();
   formData.append("file", fileInput.files[0]);
 
-  if (highlightedOutput) {
-    highlightedOutput.innerText = "Analyzing uploaded file...";
-  }
+  if (highlightedOutput) highlightedOutput.innerText = "Analyzing uploaded file...";
+  if (correctedOutput) correctedOutput.innerText = "Analyzing...";
+  if (rewriteOutput) rewriteOutput.innerText = "Analyzing...";
 
   try {
     const response = await fetch("/analyze-file", {
@@ -189,20 +203,22 @@ async function analyzeUploadedFile() {
     const data = await response.json();
 
     if (!response.ok) {
-      if (highlightedOutput) {
-        highlightedOutput.innerText = data.error || "File analysis failed.";
-      }
+      if (highlightedOutput) highlightedOutput.innerText = data.error || "File analysis failed.";
+      if (correctedOutput) correctedOutput.innerText = "";
+      if (rewriteOutput) rewriteOutput.innerText = "";
       return;
     }
 
     renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    if (highlightedOutput) {
-      highlightedOutput.innerText = "Error uploading file.";
-    }
+    if (highlightedOutput) highlightedOutput.innerText = "Error uploading file.";
+    if (correctedOutput) correctedOutput.innerText = "";
+    if (rewriteOutput) rewriteOutput.innerText = "";
   }
 }
+
+/* ---------------- Dashboard ---------------- */
 
 function renderCharts(totalRequirements, ambiguousCount) {
   const clearCount = Math.max(totalRequirements - ambiguousCount, 0);
@@ -307,6 +323,8 @@ async function loadDashboard() {
   }
 }
 
+/* ---------------- History ---------------- */
+
 async function loadHistory() {
   const historyContainer = document.getElementById("historyContainer");
 
@@ -350,6 +368,8 @@ async function loadHistory() {
     historyContainer.innerHTML = "<p>Error loading history.</p>";
   }
 }
+
+/* ---------------- Admin ---------------- */
 
 async function loadAdmin() {
   const adminUsers = document.getElementById("adminUsers");

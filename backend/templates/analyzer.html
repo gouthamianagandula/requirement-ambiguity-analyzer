@@ -35,59 +35,36 @@
             </header>
 
             <section class="panel glass input-panel">
-                <form id="analyzerForm" class="analyzer-form">
-                    <label for="requirementText" class="field-label">Requirement Text</label>
-                    <textarea
-                        id="requirementText"
-                        name="text"
-                        placeholder="Example: the system should quickly process the file and it should notify user soon"
-                    ></textarea>
+                <textarea
+                    id="requirementText"
+                    placeholder="Example: the system should quickly process the file and it should notify user soon"
+                ></textarea>
 
-                    <div class="upload-row">
-                        <div class="upload-box">
-                            <label for="fileInput" class="field-label">Upload File (.txt, .docx, .pdf)</label>
-                            <input id="fileInput" name="file" type="file" accept=".txt,.docx,.pdf" />
-                        </div>
+                <input id="fileInput" type="file" accept=".txt,.docx,.pdf" />
 
-                        <button id="analyzeBtn" type="submit" class="primary-btn">
-                            Analyze
-                        </button>
-                    </div>
-                </form>
-
-                <div id="loadingWrap" class="loading-wrap hidden">
-                    <div class="loader-ring"></div>
-                    <p>Running analysis...</p>
+                <div class="top-actions">
+                    <button class="primary-btn" onclick="analyzeRequirement()">Analyze Text</button>
+                    <button class="secondary-btn" onclick="analyzeUploadedFile()">Analyze File</button>
                 </div>
             </section>
 
-            <section id="emptyState" class="panel glass empty-state">
-                <h3>Ready</h3>
-                <p>Enter a sentence or upload a file to analyze.</p>
+            <!-- RESULTS -->
+
+            <section class="panel glass result-card">
+                <h3>Highlighted Wrong Words</h3>
+                <div id="highlightedOutput" class="result-box"></div>
             </section>
 
-            <section id="resultsWrap" class="results-stack hidden">
-                <div class="panel glass result-card">
-                    <div class="section-head">
-                        <h3>Highlighted Text</h3>
-                    </div>
-                    <div id="highlightedTextBox" class="result-box"></div>
-                </div>
-
-                <div class="panel glass result-card">
-                    <div class="section-head">
-                        <h3>Corrected Sentence</h3>
-                    </div>
-                    <div id="correctedTextBox" class="result-box"></div>
-                </div>
-
-                <div class="panel glass result-card">
-                    <div class="section-head">
-                        <h3>Professional Rewrite</h3>
-                    </div>
-                    <div id="rewriteTextBox" class="result-box"></div>
-                </div>
+            <section class="panel glass result-card">
+                <h3>Corrected Sentence</h3>
+                <div id="correctedOutput" class="result-box"></div>
             </section>
+
+            <section class="panel glass result-card">
+                <h3>Professional Rewrite</h3>
+                <div id="rewriteOutput" class="result-box"></div>
+            </section>
+
         </main>
     </div>
 
