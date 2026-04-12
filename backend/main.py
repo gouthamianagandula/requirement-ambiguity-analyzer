@@ -125,7 +125,7 @@ def is_logged_in(request: Request):
 def get_highlight_class(issue):
     issue_type = issue.get("issue_type", "")
 
-    if issue_type in {"grammar", "wrong_verb_form", "repeated_word"}:
+    if issue_type in {"grammar", "wrong_verb_form", "repeated_word", "misplaced_modifier"}:
         return "highlight-grammar"
 
     if issue_type == "spelling":
@@ -136,7 +136,8 @@ def get_highlight_class(issue):
         "unclear_pronoun",
         "ambiguous_structure",
         "confusing_construction",
-        "double_negative"
+        "double_negative",
+        "multiple_meaning"
     }:
         return "highlight-ambiguity"
 

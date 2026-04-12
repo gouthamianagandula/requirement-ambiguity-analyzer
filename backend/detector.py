@@ -126,6 +126,78 @@ NEGATIVE_TERMS = {
     "nowhere", "hardly", "scarcely", "barely", "cannot", "can't",
     "won't", "don't", "doesn't", "isn't", "aren't", "wasn't", "weren't"
 }
+MULTI_MEANING_MAP = {
+    "file": [
+        "document",
+        "computer file",
+        "filing record"
+    ],
+    "record": [
+        "saved data entry",
+        "audio recording",
+        "official document"
+    ],
+    "port": [
+        "network port",
+        "physical connector",
+        "harbor"
+    ],
+    "charge": [
+        "electrical charge",
+        "fee",
+        "accusation"
+    ],
+    "issue": [
+        "problem",
+        "version or release",
+        "publication issue"
+    ],
+    "state": [
+        "condition",
+        "stored status",
+        "political region"
+    ],
+    "run": [
+        "execute software",
+        "operate continuously",
+        "physical running"
+    ],
+    "table": [
+        "data table",
+        "piece of furniture",
+        "postpone for later discussion"
+    ],
+    "current": [
+        "present time",
+        "electrical flow",
+        "water movement"
+    ],
+    "draft": [
+        "initial version",
+        "air flow",
+        "selection process"
+    ],
+    "match": [
+        "correspond",
+        "contest",
+        "small flame stick"
+    ],
+    "light": [
+        "illumination",
+        "not heavy",
+        "ignite"
+    ],
+    "lead": [
+        "guide",
+        "metal",
+        "main advantage"
+    ],
+    "address": [
+        "location",
+        "speak to",
+        "handle a problem"
+    ],
+}
 
 
 def ensure_nltk_data():
@@ -186,6 +258,7 @@ def build_issue(
     replacement: str = "",
     issue_type: str = "",
     source: str = "custom",
+    meanings: List[str] = None,
 ) -> Dict[str, Any]:
     return {
         "term": term,
@@ -198,6 +271,7 @@ def build_issue(
         "end": end,
         "issue_type": issue_type or category.lower().replace(" ", "_"),
         "source": source,
+        "meanings": meanings or [],
     }
 
 
@@ -442,6 +516,57 @@ def detect_wrong_verb_forms(sentence: str, offset: int = 0) -> List[Dict[str, An
     return issues
 
 
+def detect_multiple_meanings(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
+    issues = []
+    for word, start, end in tokenize_with_offsets(sentence):
+        lower = word.lower()
+        meanings = MULTI_MEANING_MAP.get(lower)
+        if meanings:
+            issues.append(build_issue(
+                term=word,
+                start=offset + start,
+                end=offset + end,
+                category="Multiple Meanings",
+                explanation="This word may have more than one meaning in English.",
+                suggestion="Use a more specific term if the context is technical or strict.",
+                severity="Medium",
+                replacement="",
+                issue_type="multiple_meaning",
+                source="rules",
+                meanings=meanings,
+            ))
+    return issues
+
+
+def detect_misplaced_modifier(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
+    issues = []
+    pattern = re.compile(r"^(Using|Based on|After|Before|While|When)\b[^,]{5,},", re.IGNORECASE)
+    match = pattern.search(sentence.strip())
+    if not match:
+        return issues
+
+    after = sentence[match.end():].strip()
+    words = re.findall(r"\b[A-Za-z][A-Za-z'-]*\b", after)
+    if not words:
+        return issues
+
+    first_word = words[0].lower()
+    if first_word in {"it", "they", "this", "that", "these", "those"}:
+        issues.append(build_issue(
+            term=match.group(0),
+            start=offset + match.start(),
+            end=offset + match.end(),
+            category="Misplaced Modifier",
+            explanation="The opening phrase may not clearly modify the correct subject.",
+            suggestion="Rewrite the sentence so the subject directly follows the opening phrase.",
+            severity="Medium",
+            replacement="",
+            issue_type="misplaced_modifier",
+            source="rules",
+        ))
+    return issues
+
+
 def detect_languagetool_issues(text: str) -> Tuple[List[Dict[str, Any]], str]:
     issues = []
     try:
@@ -556,6 +681,8 @@ def analyze_text(text: str) -> Dict[str, Any]:
         local_issues.extend(detect_double_negative(sentence, offset))
         local_issues.extend(detect_ambiguous_structure(sentence, offset))
         local_issues.extend(detect_wrong_verb_forms(sentence, offset))
+        local_issues.extend(detect_multiple_meanings(sentence, offset))
+        local_issues.extend(detect_misplaced_modifier(sentence, offset))
         all_issues.extend(local_issues)
 
     all_issues = dedupe_issues(all_issues)
@@ -577,8 +704,14 @@ def analyze_text(text: str) -> Dict[str, Any]:
         })
 
     stats = {
-        "grammar": sum(1 for x in all_issues if x["issue_type"] in {"grammar", "wrong_verb_form", "punctuation", "casing", "style", "repeated_word"}),
-        "ambiguity": sum(1 for x in all_issues if x["issue_type"] in {"ambiguity", "unclear_pronoun", "ambiguous_structure", "confusing_construction", "double_negative"}),
+        "grammar": sum(1 for x in all_issues if x["issue_type"] in {
+            "grammar", "wrong_verb_form", "punctuation", "casing", "style",
+            "repeated_word", "misplaced_modifier"
+        }),
+        "ambiguity": sum(1 for x in all_issues if x["issue_type"] in {
+            "ambiguity", "unclear_pronoun", "ambiguous_structure",
+            "confusing_construction", "double_negative", "multiple_meaning"
+        }),
         "spelling": sum(1 for x in all_issues if x["issue_type"] == "spelling"),
         "total": len(all_issues),
     }

@@ -83,7 +83,7 @@ def _apply_replacements(text, detected_items):
     for item in detected_items:
         issue_type = item.get("issue_type", "")
         original = item.get("term", "")
-        replacement = item.get("replacement", "") or ""
+        replacement = (item.get("replacement", "") or "").strip()
 
         if not original:
             continue
@@ -95,7 +95,7 @@ def _apply_replacements(text, detected_items):
 
         elif issue_type == "unclear_pronoun":
             pronoun = original.lower()
-            antecedent = replacement.strip() if replacement.strip() else _find_nearest_subject_before(rewritten, original)
+            antecedent = replacement if replacement else _find_nearest_subject_before(rewritten, original)
             if antecedent and pronoun in {"it", "this", "that"}:
                 rewritten = _replace_word(rewritten, original, antecedent)
             elif antecedent and pronoun in {"they", "them", "their", "these", "those"}:
@@ -111,6 +111,10 @@ def _apply_replacements(text, detected_items):
             rewritten = re.sub(r"\bcan't not\b", "cannot", rewritten, flags=re.IGNORECASE)
             rewritten = re.sub(r"\bnot no\b", "no", rewritten, flags=re.IGNORECASE)
             rewritten = re.sub(r"\bnever no\b", "no", rewritten, flags=re.IGNORECASE)
+
+        elif issue_type == "multiple_meaning":
+            # do not force replace; just leave sentence natural
+            pass
 
         elif issue_type in {"grammar", "wrong_verb_form", "spelling", "punctuation", "casing", "style"}:
             if replacement:
