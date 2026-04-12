@@ -128,8 +128,10 @@ def get_highlight_class(issue):
 
     if issue_type in {"grammar", "wrong_verb_form", "repeated_word"}:
         return "highlight-grammar"
+
     if issue_type == "spelling":
         return "highlight-spelling"
+
     if issue_type in {
         "ambiguity",
         "unclear_pronoun",
@@ -139,6 +141,7 @@ def get_highlight_class(issue):
         "double_negative"
     }:
         return "highlight-ambiguity"
+
     return "highlight-style"
 
 
@@ -200,6 +203,7 @@ def run_analysis(text: str, user: dict):
         stats["total_score_sum"] / stats["total_requirements_analyzed"], 2
     )
     stats["last_predicted_label"] = ml_label
+
     write_stats(stats)
 
     save_history(
@@ -216,9 +220,9 @@ def run_analysis(text: str, user: dict):
         "highlighted_html": highlighted_html,
         "corrected_text": analysis.get("corrected_text", text),
         "rewrite": rewritten,
+        "ml_label": ml_label,
         "score": score,
         "score_label": score_label,
-        "ml_label": ml_label,
     }
 
 
@@ -322,6 +326,11 @@ async def auth_google(request: Request):
     return RedirectResponse(url="/analyzer")
 
 
+@app.get("/login/microsoft")
+async def login_microsoft():
+    return RedirectResponse(url="/login")
+
+
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
@@ -401,6 +410,10 @@ async def analyze(data: RequirementInput, request: Request):
         return JSONResponse({"error": "Login required"}, status_code=401)
 
     text = data.text.strip()
+
+    if not text:
+        return JSONResponse({"error": "Text is required."}, status_code=400)
+
     user = request.session.get("user")
     return run_analysis(text, user)
 
