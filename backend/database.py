@@ -106,3 +106,29 @@ def get_user_by_email(email):
     conn.close()
 
     return dict(row) if row else None
+
+
+def get_all_history():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, user_name, user_email, input_text, predicted_label, score, rewrite, created_at
+        FROM analysis_history
+        ORDER BY created_at DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_all_users():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, name, email, created_at
+        FROM users
+        ORDER BY created_at DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]

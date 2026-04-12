@@ -5,93 +5,95 @@ import json
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "data" / "ambiguous_words.json"
 
-with open(DATA_FILE, "r", encoding="utf-8") as f:
-    FILE_TERMS = json.load(f)
+FILE_TERMS = {}
+if DATA_FILE.exists():
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        FILE_TERMS = json.load(f)
 
 DEFAULT_TERMS = {
-    "should": {
-        "category": "Weak Modality",
-        "explanation": "The word 'should' is weak and not strictly enforceable.",
-        "suggestion": "Use 'shall' for mandatory requirements.",
-        "severity": "Medium",
-        "replacement": "shall"
-    },
-    "may": {
-        "category": "Optional Language",
-        "explanation": "The word 'may' makes the behavior optional.",
-        "suggestion": "Use 'shall' if it must happen.",
-        "severity": "Medium",
-        "replacement": "shall"
-    },
-    "can": {
-        "category": "Weak Capability",
-        "explanation": "The word 'can' describes possibility, not a strict requirement.",
-        "suggestion": "Rewrite using clear system behavior.",
-        "severity": "Medium",
-        "replacement": "shall be able to"
-    },
     "fast": {
         "category": "Performance Ambiguity",
         "explanation": "The word 'fast' is subjective and not measurable.",
-        "suggestion": "Specify the response time.",
+        "suggestion": "Specify exact response time.",
         "severity": "High",
         "replacement": "within 2 seconds"
     },
     "quick": {
         "category": "Performance Ambiguity",
         "explanation": "The word 'quick' is vague.",
-        "suggestion": "Use measurable timing.",
+        "suggestion": "Specify exact response time.",
         "severity": "High",
         "replacement": "within 2 seconds"
     },
-    "slow": {
-        "category": "Performance Ambiguity",
-        "explanation": "The word 'slow' is vague.",
-        "suggestion": "Specify an exact response threshold.",
-        "severity": "Medium",
-        "replacement": "[exact response time]"
+    "soon": {
+        "category": "Time Ambiguity",
+        "explanation": "The word 'soon' is not measurable.",
+        "suggestion": "Specify exact deadline.",
+        "severity": "High",
+        "replacement": "by [exact date/time]"
     },
     "easy": {
-        "category": "Subjective Language",
+        "category": "Usability Ambiguity",
         "explanation": "The word 'easy' is subjective.",
-        "suggestion": "Use a measurable usability target.",
+        "suggestion": "Define measurable usability criteria.",
         "severity": "High",
         "replacement": "[measurable usability requirement]"
-    },
-    "simple": {
-        "category": "Subjective Language",
-        "explanation": "The word 'simple' is subjective.",
-        "suggestion": "Describe exact user interaction or flow.",
-        "severity": "High",
-        "replacement": "[exact interaction steps]"
     },
     "user-friendly": {
-        "category": "Subjective Language",
-        "explanation": "The phrase 'user-friendly' is not measurable.",
-        "suggestion": "Use measurable usability requirements.",
+        "category": "Usability Ambiguity",
+        "explanation": "The phrase 'user-friendly' is subjective.",
+        "suggestion": "Use measurable usability criteria.",
         "severity": "High",
-        "replacement": "[measurable usability requirement]"
-    },
-    "reliable": {
-        "category": "Quality Ambiguity",
-        "explanation": "The word 'reliable' needs measurable criteria.",
-        "suggestion": "Specify uptime or failure rate.",
-        "severity": "High",
-        "replacement": "99.9% uptime"
-    },
-    "secure": {
-        "category": "Security Ambiguity",
-        "explanation": "The word 'secure' is too broad.",
-        "suggestion": "Specify authentication, encryption, or access control.",
-        "severity": "High",
-        "replacement": "[specific security controls]"
+        "replacement": "[measurable usability criteria]"
     },
     "efficient": {
         "category": "Quality Ambiguity",
         "explanation": "The word 'efficient' is subjective.",
-        "suggestion": "Use measurable efficiency criteria.",
+        "suggestion": "Use measurable performance or efficiency criteria.",
         "severity": "High",
         "replacement": "[measurable efficiency target]"
+    },
+    "etc": {
+        "category": "Incomplete Requirement",
+        "explanation": "The term 'etc' leaves the requirement incomplete.",
+        "suggestion": "List all required items explicitly.",
+        "severity": "High",
+        "replacement": "[complete list]"
+    },
+    "and/or": {
+        "category": "Logical Ambiguity",
+        "explanation": "The phrase 'and/or' is ambiguous.",
+        "suggestion": "Choose either 'and' or 'or'.",
+        "severity": "High",
+        "replacement": "[and or or]"
+    },
+    "may": {
+        "category": "Weak Language",
+        "explanation": "The word 'may' makes the requirement optional.",
+        "suggestion": "Use 'shall' if the behavior is mandatory.",
+        "severity": "Medium",
+        "replacement": "shall"
+    },
+    "should": {
+        "category": "Weak Language",
+        "explanation": "The word 'should' is weak and not strictly enforceable.",
+        "suggestion": "Use 'shall' or 'must' for mandatory behavior.",
+        "severity": "Medium",
+        "replacement": "shall"
+    },
+    "can": {
+        "category": "Weak Language",
+        "explanation": "The word 'can' describes possibility, not a strict requirement.",
+        "suggestion": "Rewrite as direct system behavior.",
+        "severity": "Medium",
+        "replacement": "shall be able to"
+    },
+    "might": {
+        "category": "Uncertainty",
+        "explanation": "The word 'might' introduces uncertainty.",
+        "suggestion": "State the requirement clearly and directly.",
+        "severity": "Medium",
+        "replacement": "shall"
     },
     "appropriate": {
         "category": "Subjective Language",
@@ -103,23 +105,44 @@ DEFAULT_TERMS = {
     "sufficient": {
         "category": "Vague Quantity",
         "explanation": "The word 'sufficient' is vague.",
-        "suggestion": "Specify the threshold or quantity.",
+        "suggestion": "Specify threshold or quantity.",
         "severity": "Medium",
         "replacement": "[exact threshold]"
     },
     "minimal": {
         "category": "Vague Quantity",
         "explanation": "The word 'minimal' is unclear.",
-        "suggestion": "Specify the exact minimum value.",
+        "suggestion": "Specify exact minimum value.",
         "severity": "Medium",
         "replacement": "[exact minimum]"
     },
-    "maximum": {
-        "category": "Vague Quantity",
-        "explanation": "The word 'maximum' without a number is incomplete.",
-        "suggestion": "Specify the exact maximum value.",
-        "severity": "Medium",
-        "replacement": "[exact maximum]"
+    "optimal": {
+        "category": "Subjective Language",
+        "explanation": "The word 'optimal' is subjective.",
+        "suggestion": "Define measurable criteria.",
+        "severity": "High",
+        "replacement": "[measurable criteria]"
+    },
+    "reliable": {
+        "category": "Quality Ambiguity",
+        "explanation": "The word 'reliable' needs measurable criteria.",
+        "suggestion": "Specify uptime or failure rate.",
+        "severity": "High",
+        "replacement": "99.9% uptime"
+    },
+    "secure": {
+        "category": "Security Ambiguity",
+        "explanation": "The word 'secure' is too broad.",
+        "suggestion": "Specify exact security controls.",
+        "severity": "High",
+        "replacement": "[specific security controls]"
+    },
+    "simple": {
+        "category": "Subjective Language",
+        "explanation": "The word 'simple' is subjective.",
+        "suggestion": "Describe exact interaction steps.",
+        "severity": "High",
+        "replacement": "[exact interaction steps]"
     },
     "many": {
         "category": "Vague Quantity",
@@ -145,7 +168,7 @@ DEFAULT_TERMS = {
     "as soon as possible": {
         "category": "Time Ambiguity",
         "explanation": "The phrase is not measurable.",
-        "suggestion": "Specify a deadline or time limit.",
+        "suggestion": "Specify deadline or time limit.",
         "severity": "High",
         "replacement": "[exact deadline]"
     },
@@ -169,13 +192,6 @@ DEFAULT_TERMS = {
         "suggestion": "Specify when it applies.",
         "severity": "Medium",
         "replacement": "[exact condition]"
-    },
-    "etc": {
-        "category": "Incomplete Requirement",
-        "explanation": "The term 'etc' leaves the requirement incomplete.",
-        "suggestion": "List all required items explicitly.",
-        "severity": "High",
-        "replacement": "[full list]"
     }
 }
 
@@ -210,7 +226,6 @@ def _find_term_matches(text: str, term: str):
 
 def detect(text: str):
     results = []
-
     for term, details in TERMS.items():
         matches = _find_term_matches(text, term)
         for match in matches:
@@ -225,7 +240,6 @@ def detect(text: str):
                 "start": match.start(),
                 "end": match.end()
             })
-
     results.sort(key=lambda x: x["start"])
     return results
 

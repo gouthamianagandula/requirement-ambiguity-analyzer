@@ -3,8 +3,8 @@ import re
 
 def generate_rewrite(text, detected_items):
     rewritten = text
-
     replacements = []
+
     for item in detected_items:
         original = item.get("term", "")
         replacement = item.get("replacement", "")
