@@ -104,8 +104,6 @@ async function registerWithEmail() {
   }
 }
 
-/* ---------------- Analyzer Result Rendering ---------------- */
-
 function renderAnalyzerResult(data) {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
@@ -218,8 +216,6 @@ async function analyzeUploadedFile() {
   }
 }
 
-/* ---------------- Dashboard ---------------- */
-
 function renderCharts(totalRequirements, ambiguousCount) {
   const clearCount = Math.max(totalRequirements - ambiguousCount, 0);
 
@@ -323,8 +319,6 @@ async function loadDashboard() {
   }
 }
 
-/* ---------------- History ---------------- */
-
 async function loadHistory() {
   const historyContainer = document.getElementById("historyContainer");
 
@@ -368,8 +362,6 @@ async function loadHistory() {
     historyContainer.innerHTML = "<p>Error loading history.</p>";
   }
 }
-
-/* ---------------- Admin ---------------- */
 
 async function loadAdmin() {
   const adminUsers = document.getElementById("adminUsers");
