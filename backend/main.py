@@ -19,7 +19,6 @@ from pypdf import PdfReader
 from backend.detector import analyze_text
 from backend.scorer import calculate_score, get_score_label
 from backend.suggester import generate_rewrite
-from backend.classifier import predict_label
 from backend.database import (
     init_db,
     save_history,
@@ -135,7 +134,6 @@ def get_highlight_class(issue):
     if issue_type in {
         "ambiguity",
         "unclear_pronoun",
-        "multiple_meaning",
         "ambiguous_structure",
         "confusing_construction",
         "double_negative"
@@ -188,8 +186,10 @@ def run_analysis(text: str, user: dict):
 
     score = calculate_score(all_issues)
     score_label = get_score_label(score)
-    rewritten = generate_rewrite(analysis.get("corrected_text", text), all_issues)
-    ml_label = predict_label(text)
+    predicted_label = score_label.lower()
+
+    corrected_text = analysis.get("corrected_text", text)
+    rewritten = generate_rewrite(text, all_issues, corrected_text=corrected_text)
     highlighted_html = build_highlight_html(text, all_issues)
 
     stats = read_stats()
@@ -202,7 +202,7 @@ def run_analysis(text: str, user: dict):
     stats["average_score"] = round(
         stats["total_score_sum"] / stats["total_requirements_analyzed"], 2
     )
-    stats["last_predicted_label"] = ml_label
+    stats["last_predicted_label"] = predicted_label
 
     write_stats(stats)
 
@@ -210,7 +210,7 @@ def run_analysis(text: str, user: dict):
         user_name=user.get("name", "User"),
         user_email=user.get("email", ""),
         input_text=text,
-        predicted_label=ml_label,
+        predicted_label=predicted_label,
         score=score,
         rewrite=rewritten,
     )
@@ -218,9 +218,9 @@ def run_analysis(text: str, user: dict):
     return {
         "input": text,
         "highlighted_html": highlighted_html,
-        "corrected_text": analysis.get("corrected_text", text),
+        "corrected_text": corrected_text,
         "rewrite": rewritten,
-        "ml_label": ml_label,
+        "ml_label": predicted_label,
         "score": score,
         "score_label": score_label,
     }
@@ -410,7 +410,6 @@ async def analyze(data: RequirementInput, request: Request):
         return JSONResponse({"error": "Login required"}, status_code=401)
 
     text = data.text.strip()
-
     if not text:
         return JSONResponse({"error": "Text is required."}, status_code=400)
 
