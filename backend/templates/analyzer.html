@@ -8,10 +8,7 @@
 </head>
 <body>
   <div class="analyzer-page">
-
-    <!-- LEFT PANEL -->
     <aside class="left-panel glass-card">
-
       <div class="profile-box">
         <div class="profile-avatar">
           {{ user.name[0] if user and user.name else 'U' }}
@@ -48,13 +45,13 @@
         </div>
       </div>
 
-      <button class="btn primary-btn full-btn" onclick="loadDashboard()">
+      <button type="button" class="btn primary-btn full-btn" onclick="loadDashboard()">
         Refresh Dashboard
       </button>
 
       <br /><br />
 
-      <button class="btn primary-btn full-btn" onclick="toggleTheme()">
+      <button type="button" class="btn primary-btn full-btn" onclick="toggleTheme()">
         Toggle Theme
       </button>
 
@@ -81,12 +78,9 @@
       <a href="/logout" class="btn secondary-btn full-btn">
         Logout
       </a>
-
     </aside>
 
-    <!-- RIGHT PANEL -->
     <main class="right-panel glass-card">
-
       <h1>Requirement Analyzer</h1>
       <p class="subtitle">
         Enter any sentence or paragraph and analyze it using AI
@@ -95,57 +89,47 @@
       <textarea id="requirementText" placeholder="Enter requirement here..."></textarea>
 
       <div class="top-actions">
-        <button class="btn primary-btn" onclick="analyzeRequirement()">
+        <button type="button" class="btn primary-btn" onclick="analyzeRequirement()">
           Analyze Requirement
         </button>
       </div>
 
-      <!-- FILE UPLOAD -->
       <div class="analysis-section">
         <h3>Upload Document</h3>
-
-      <label for="fileInput">Select a document file</label>
-      <input type="file" id="fileInput" accept=".txt,.docx,.pdf" >
-
+        <label for="fileInput">Select a document file</label>
+        <input type="file" id="fileInput" accept=".txt,.docx,.pdf">
         <div class="top-actions">
-          <button class="btn primary-btn" onclick="analyzeUploadedFile()">
+          <button type="button" class="btn primary-btn" onclick="analyzeUploadedFile()">
             Analyze File
           </button>
         </div>
       </div>
 
-      <!-- HIGHLIGHT -->
       <div class="analysis-section">
         <h3>Highlighted Text</h3>
         <div id="highlightedOutput" class="result-box result-html-box"></div>
       </div>
 
-      <!-- REWRITE -->
       <div class="analysis-section">
         <h3>Suggested Rewrite</h3>
         <div id="rewriteOutput" class="result-box"></div>
       </div>
 
-      <!-- CHANGES -->
       <div class="analysis-section">
         <h3>Changes Needed</h3>
         <div id="changesOutput" class="result-box"></div>
       </div>
 
-      <!-- SENTENCE ANALYSIS -->
       <div class="analysis-section">
         <h3>Sentence Analysis</h3>
         <div id="sentenceOutput" class="result-box"></div>
       </div>
 
-      <!-- FULL RESULT -->
       <div class="analysis-section">
         <h3>Full Analysis Result</h3>
         <div id="analysisResult" class="result-box"></div>
       </div>
-
     </main>
-
   </div>
 
   <script src="/static/app.js"></script>

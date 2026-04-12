@@ -2,7 +2,7 @@ let barChartInstance = null;
 let doughnutChartInstance = null;
 
 function applySavedTheme() {
-  const savedTheme = localStorage.getItem("theme") || "light-theme";
+  const savedTheme = localStorage.getItem("theme") || "dark-theme";
   document.body.classList.remove("light-theme", "dark-theme");
   document.body.classList.add(savedTheme);
 }
