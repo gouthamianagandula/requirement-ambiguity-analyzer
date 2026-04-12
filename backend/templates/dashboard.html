@@ -15,8 +15,8 @@
           {{ user.name[0] if user and user.name else 'U' }}
         </div>
         <div>
-          <h3 id="profileName">{{ user.name }}</h3>
-          <p id="profileEmail">{{ user.email }}</p>
+          <h3 id="profileName">{{ user.name if user else '' }}</h3>
+          <p id="profileEmail">{{ user.email if user else '' }}</p>
         </div>
       </div>
 
@@ -38,12 +38,15 @@
       <a href="/history-page" class="btn primary-btn full-btn">Analyzer History</a>
 
       <br /><br />
+      <a href="/admin" class="btn primary-btn full-btn">Admin Panel</a>
+
+      <br /><br />
       <a href="/logout" class="btn secondary-btn full-btn">Logout</a>
     </aside>
 
     <main class="right-panel glass-card">
       <h1>Dashboard Analytics</h1>
-      <p class="subtitle">Visual summary of your requirement analysis</p>
+      <p class="subtitle">Professional summary of your requirement analysis activity</p>
 
       <div class="dashboard-list">
         <div class="dashboard-item">

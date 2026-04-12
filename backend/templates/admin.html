@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Analyzer History - Requirement Ambiguity Analyzer</title>
+  <title>Admin Panel - Requirement Ambiguity Analyzer</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -14,8 +14,8 @@
           {{ user.name[0] if user and user.name else 'U' }}
         </div>
         <div>
-          <h3 id="profileName">{{ user.name if user else '' }}</h3>
-          <p id="profileEmail">{{ user.email if user else '' }}</p>
+          <h3>{{ user.name if user else '' }}</h3>
+          <p>{{ user.email if user else '' }}</p>
         </div>
       </div>
 
@@ -44,11 +44,17 @@
     </aside>
 
     <main class="right-panel glass-card">
-      <h1>Analyzer History</h1>
-      <p class="subtitle">Saved history for your profile</p>
+      <h1>Admin Panel</h1>
+      <p class="subtitle">Professional overview of users and requirement analysis history</p>
 
-      <div id="historyContainer" class="result-box">
-        Loading your history...
+      <div class="analysis-section">
+        <h3>Registered Users</h3>
+        <div id="adminUsers" class="result-box">Loading users...</div>
+      </div>
+
+      <div class="analysis-section">
+        <h3>All Analysis History</h3>
+        <div id="adminHistory" class="result-box">Loading history...</div>
       </div>
     </main>
   </div>
