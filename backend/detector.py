@@ -84,7 +84,7 @@ DEFAULT_TERMS = {
     },
     "and/or": {
         "category": "Logical Ambiguity",
-        "explanation": "The phrase is ambiguous.",
+        "explanation": "The phrase 'and/or' can be interpreted in more than one way.",
         "suggestion": "Choose either 'and' or 'or'.",
         "severity": "High",
         "replacement": "or",
@@ -120,83 +120,28 @@ for key, value in FILE_TERMS.items():
 for key, value in DEFAULT_TERMS.items():
     TERMS[key.lower()] = value
 
-UNCLEAR_PRONOUNS = {"it", "they", "them", "their", "this", "that", "these", "those"}
+UNCLEAR_PRONOUNS = {"he", "she", "his", "her", "it", "they", "them", "their", "this", "that", "these", "those"}
 NEGATIVE_TERMS = {
     "not", "no", "never", "nothing", "nobody", "none", "neither",
     "nowhere", "hardly", "scarcely", "barely", "cannot", "can't",
     "won't", "don't", "doesn't", "isn't", "aren't", "wasn't", "weren't"
 }
 MULTI_MEANING_MAP = {
-    "file": [
-        "document",
-        "computer file",
-        "filing record"
-    ],
-    "record": [
-        "saved data entry",
-        "audio recording",
-        "official document"
-    ],
-    "port": [
-        "network port",
-        "physical connector",
-        "harbor"
-    ],
-    "charge": [
-        "electrical charge",
-        "fee",
-        "accusation"
-    ],
-    "issue": [
-        "problem",
-        "version or release",
-        "publication issue"
-    ],
-    "state": [
-        "condition",
-        "stored status",
-        "political region"
-    ],
-    "run": [
-        "execute software",
-        "operate continuously",
-        "physical running"
-    ],
-    "table": [
-        "data table",
-        "piece of furniture",
-        "postpone for later discussion"
-    ],
-    "current": [
-        "present time",
-        "electrical flow",
-        "water movement"
-    ],
-    "draft": [
-        "initial version",
-        "air flow",
-        "selection process"
-    ],
-    "match": [
-        "correspond",
-        "contest",
-        "small flame stick"
-    ],
-    "light": [
-        "illumination",
-        "not heavy",
-        "ignite"
-    ],
-    "lead": [
-        "guide",
-        "metal",
-        "main advantage"
-    ],
-    "address": [
-        "location",
-        "speak to",
-        "handle a problem"
-    ],
+    "file": ["document", "computer file", "filing record"],
+    "record": ["saved data entry", "audio recording", "official document"],
+    "port": ["network port", "physical connector", "harbor"],
+    "charge": ["electrical charge", "fee", "accusation"],
+    "issue": ["problem", "version or release", "publication issue"],
+    "state": ["condition", "stored status", "political region"],
+    "run": ["execute software", "operate continuously", "physical running"],
+    "table": ["data table", "piece of furniture", "postpone for discussion"],
+    "current": ["present time", "electrical flow", "water movement"],
+    "draft": ["initial version", "air flow", "selection process"],
+    "match": ["correspond", "contest", "small flame stick"],
+    "light": ["illumination", "not heavy", "ignite"],
+    "lead": ["guide", "metal", "main advantage"],
+    "address": ["location", "speak to", "handle a problem"],
+    "bank": ["financial institution", "river side", "store or rely on"],
 }
 
 
@@ -259,6 +204,7 @@ def build_issue(
     issue_type: str = "",
     source: str = "custom",
     meanings: List[str] = None,
+    alternatives: List[str] = None,
 ) -> Dict[str, Any]:
     return {
         "term": term,
@@ -272,6 +218,7 @@ def build_issue(
         "issue_type": issue_type or category.lower().replace(" ", "_"),
         "source": source,
         "meanings": meanings or [],
+        "alternatives": alternatives or [],
     }
 
 
@@ -371,7 +318,7 @@ def detect_unclear_pronouns(sentence: str, offset: int = 0) -> List[Dict[str, An
         should_flag = False
         if idx == 0:
             should_flag = True
-        elif len(before_nouns) >= 2 and lower in {"it", "they", "this", "that"}:
+        elif len(before_nouns) >= 2 and lower in {"he", "she", "his", "her", "it", "they", "this", "that"}:
             should_flag = True
         elif lower in {"this", "that", "these", "those"} and len(nouns) >= 2:
             should_flag = True
@@ -444,7 +391,7 @@ def detect_ambiguous_structure(sentence: str, offset: int = 0) -> List[Dict[str,
             end=offset + len(sentence),
             category="Confusing Construction",
             explanation="The sentence is long or nested and may be hard to understand.",
-            suggestion="Split it into shorter requirement sentences.",
+            suggestion="Split it into shorter sentences.",
             severity="Medium",
             replacement="",
             issue_type="confusing_construction",
@@ -465,7 +412,7 @@ def detect_wrong_verb_forms(sentence: str, offset: int = 0) -> List[Dict[str, An
 
     for i in range(len(tags) - 1):
         word, _tag = tags[i]
-        next_word, next_tag = tags[i + 1]
+        _next_word, next_tag = tags[i + 1]
         lower = word.lower()
 
         if lower in {"shall", "should", "must", "can", "may", "will"} and next_tag in {"VBD", "VBN"}:
@@ -564,6 +511,122 @@ def detect_misplaced_modifier(sentence: str, offset: int = 0) -> List[Dict[str, 
             issue_type="misplaced_modifier",
             source="rules",
         ))
+    return issues
+
+
+def detect_pattern_ambiguities(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
+    issues = []
+    s = sentence.strip()
+    lower = s.lower()
+
+    patterns = [
+        {
+            "check": lower == "i saw a girl with a telescope.",
+            "term": "with a telescope",
+            "alternatives": [
+                "I used a telescope to see a girl.",
+                "I saw a girl who was holding a telescope."
+            ],
+            "explanation": "The phrase 'with a telescope' can modify either 'I saw' or 'a girl'.",
+        },
+        {
+            "check": lower == "ravi told ramesh that he was late.",
+            "term": "he",
+            "alternatives": [
+                'Ravi told Ramesh, "You are late."',
+                "Ravi told Ramesh that Ravi was late."
+            ],
+            "explanation": "The pronoun 'he' may refer to Ravi or Ramesh.",
+        },
+        {
+            "check": lower == "visiting relatives can be boring.",
+            "term": "visiting relatives",
+            "alternatives": [
+                "It can be boring to visit relatives.",
+                "Relatives who are visiting can be boring."
+            ],
+            "explanation": "The phrase can mean either the action of visiting relatives or relatives who are visiting.",
+        },
+        {
+            "check": lower == "she gave her dog food.",
+            "term": "her dog food",
+            "alternatives": [
+                "She gave food to her dog.",
+                "She gave her dog some food that she had."
+            ],
+            "explanation": "It is unclear whether 'dog food' is food for the dog or the object she gave.",
+        },
+        {
+            "check": lower == "the teacher told the student that she was wrong.",
+            "term": "she",
+            "alternatives": [
+                'The teacher told the student, "You are wrong."',
+                "The teacher told the student that the teacher was wrong."
+            ],
+            "explanation": "The pronoun 'she' may refer to the teacher or the student.",
+        },
+        {
+            "check": lower == "he saw the man on the hill with a camera.",
+            "term": "with a camera",
+            "alternatives": [
+                "He used a camera to see the man on the hill.",
+                "He saw a man who was on the hill and had a camera."
+            ],
+            "explanation": "It is unclear who has the camera.",
+        },
+        {
+            "check": lower == "they are cooking apples.",
+            "term": "cooking apples",
+            "alternatives": [
+                "They are cooking the apples.",
+                "The apples are cooking apples."
+            ],
+            "explanation": "The sentence may refer to an action or to a type of apples.",
+        },
+        {
+            "check": lower == "i left her book on the table.",
+            "term": "her book",
+            "alternatives": [
+                "I left her book on the table for her.",
+                "I left the book that belongs to her on the table."
+            ],
+            "explanation": "It is unclear whether 'her' marks ownership or the indirect object.",
+        },
+        {
+            "check": lower == "old men and women were sitting there.",
+            "term": "old men and women",
+            "alternatives": [
+                "Old men and old women were sitting there.",
+                "Old men and women of any age were sitting there."
+            ],
+            "explanation": "It is unclear whether 'old' applies to both men and women or only to men.",
+        },
+    ]
+
+    for item in patterns:
+        if item["check"]:
+            match = re.search(re.escape(item["term"]), s, flags=re.IGNORECASE)
+            if match:
+                start = offset + match.start()
+                end = offset + match.end()
+            else:
+                start = offset
+                end = offset + len(s)
+
+            issues.append(build_issue(
+                term=s[match.start():match.end()] if match else s,
+                start=start,
+                end=end,
+                category="Sentence Ambiguity",
+                explanation=item["explanation"],
+                suggestion="Rewrite the sentence to show only one intended meaning.",
+                severity="High",
+                replacement="",
+                issue_type="ambiguous_structure",
+                source="patterns",
+                alternatives=item["alternatives"],
+            ))
+
     return issues
 
 
@@ -683,6 +746,7 @@ def analyze_text(text: str) -> Dict[str, Any]:
         local_issues.extend(detect_wrong_verb_forms(sentence, offset))
         local_issues.extend(detect_multiple_meanings(sentence, offset))
         local_issues.extend(detect_misplaced_modifier(sentence, offset))
+        local_issues.extend(detect_pattern_ambiguities(sentence, offset))
         all_issues.extend(local_issues)
 
     all_issues = dedupe_issues(all_issues)

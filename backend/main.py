@@ -224,6 +224,7 @@ def run_analysis(text: str, user: dict):
         "ml_label": predicted_label,
         "score": score,
         "score_label": score_label,
+        "issues": all_issues,
     }
 
 
