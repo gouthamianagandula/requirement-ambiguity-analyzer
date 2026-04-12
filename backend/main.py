@@ -1,5 +1,6 @@
 import json
 import os
+import html
 from io import BytesIO
 from pathlib import Path
 
@@ -122,9 +123,20 @@ def is_logged_in(request: Request):
     return request.session.get("user") is not None
 
 
+def get_highlight_class(issue):
+    issue_type = issue.get("issue_type", "")
+    if issue_type in {"grammar", "wrong_verb_form", "repeated_word"}:
+        return "highlight-grammar"
+    if issue_type == "spelling":
+        return "highlight-spelling"
+    if issue_type in {"ambiguity", "unclear_pronoun", "multiple_meaning", "ambiguous_structure", "confusing_construction", "double_negative"}:
+        return "highlight-ambiguity"
+    return "highlight-style"
+
+
 def build_highlight_html(text, issues):
     if not issues:
-        return text
+        return html.escape(text)
 
     issues_sorted = sorted(issues, key=lambda x: x["start"])
     result = []
@@ -137,20 +149,25 @@ def build_highlight_html(text, issues):
         if start < last_index:
             continue
 
-        result.append(text[last_index:start])
+        result.append(html.escape(text[last_index:start]))
 
-        word = text[start:end]
-        replacement = issue.get("replacement", "")
-        category = issue.get("category", "")
-        tooltip = f"{word} → {replacement} ({category})"
+        word = html.escape(text[start:end])
+        replacement = html.escape(issue.get("replacement", ""))
+        category = html.escape(issue.get("category", ""))
+        suggestion = html.escape(issue.get("suggestion", ""))
+        css_class = get_highlight_class(issue)
+
+        tooltip = f"{category}: {suggestion}"
+        if replacement:
+            tooltip = f"{tooltip} | Suggested: {replacement}"
 
         result.append(
-            f"<span class='highlight-word' title='{tooltip}'>{word}</span>"
+            f"<span class='highlight-word {css_class}' title='{tooltip}'>{word}</span>"
         )
 
         last_index = end
 
-    result.append(text[last_index:])
+    result.append(html.escape(text[last_index:]))
     return "".join(result)
 
 
@@ -160,7 +177,7 @@ def run_analysis(text: str, user: dict):
 
     score = calculate_score(all_issues)
     score_label = get_score_label(score)
-    rewritten = generate_rewrite(text, all_issues)
+    rewritten = generate_rewrite(analysis.get("corrected_text", text), all_issues)
     ml_label = predict_label(text)
     highlighted_html = build_highlight_html(text, all_issues)
 
@@ -171,6 +188,9 @@ def run_analysis(text: str, user: dict):
             "replace_with": issue.get("replacement", ""),
             "category": issue["category"],
             "severity": issue["severity"],
+            "suggestion": issue.get("suggestion", ""),
+            "issue_type": issue.get("issue_type", ""),
+            "meanings": issue.get("meanings", []),
         })
 
     stats = read_stats()
@@ -203,6 +223,9 @@ def run_analysis(text: str, user: dict):
         "score_label": score_label,
         "issues": all_issues,
         "rewrite": rewritten,
+        "corrected_text": analysis.get("corrected_text", text),
+        "summary": analysis.get("summary", ""),
+        "stats": analysis.get("stats", {}),
         "sentence_analysis": analysis["sentences"],
         "highlighted_html": highlighted_html,
         "changes": changes,
