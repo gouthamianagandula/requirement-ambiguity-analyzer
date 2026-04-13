@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from typing import Any, Dict, List
 
@@ -12,19 +13,14 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview").strip()
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
-# Simple in-memory cache for repeated text
 CACHE: Dict[str, Dict[str, Any]] = {}
 
 
-def _safe_json_load(text: str) -> Dict[str, Any]:
+def _safe_json_load(text: str) -> Dict[str, Any] | None:
     try:
         return json.loads(text)
     except Exception:
-        return {
-            "issues": [],
-            "corrected_text": "",
-            "rewrite": ""
-        }
+        return None
 
 
 def _normalize_string(value: Any, default: str = "") -> str:
@@ -81,46 +77,6 @@ def _normalize_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _extract_json_block(text: str) -> str:
-    text = text.strip()
-
-    if text.startswith("```"):
-        text = text.replace("```json", "").replace("```", "").strip()
-
-    start = text.find("{")
-    end = text.rfind("}")
-
-    if start == -1 or end == -1 or end < start:
-        return ""
-
-    return text[start:end + 1]
-
-
-def _build_prompt(text: str) -> str:
-    return f"""
-Analyze the following user text carefully.
-
-Return JSON only.
-
-Quality requirements:
-- corrected_text must fix grammar, punctuation, and spelling.
-- rewrite must be more professional, more precise, and less ambiguous.
-- Do not simply copy the original sentence unless it is already correct.
-- For weak requirement wording, improve rewrite into clearer professional requirement language.
-- For ambiguous wording, explain the problem in issues and give better alternatives.
-- For vague words, suggest clearer replacements.
-- For unclear pronouns, try to suggest a clearer noun or clearer rewrite.
-- For sentence ambiguity, add alternatives that express different possible meanings clearly.
-- Keep issues useful and specific.
-- Keep term short and exact.
-- Do not use placeholders like [exact noun].
-- Use direct and natural English.
-
-User text:
-{text}
-""".strip()
-
-
 def _error_result(text: str, message: str) -> Dict[str, Any]:
     return {
         "issues": [],
@@ -146,24 +102,164 @@ def _success_result(
     return result
 
 
+def _build_prompt(text: str) -> str:
+    return f"""
+Return ONLY valid JSON.
+Do not add markdown.
+Do not add triple backticks.
+Do not add explanation outside JSON.
+
+Required JSON format:
+{{
+  "issues": [
+    {{
+      "term": "",
+      "issue_type": "",
+      "category": "",
+      "explanation": "",
+      "suggestion": "",
+      "replacement": "",
+      "severity": "",
+      "alternatives": [],
+      "meanings": []
+    }}
+  ],
+  "corrected_text": "",
+  "rewrite": ""
+}}
+
+Rules:
+- corrected_text must fix grammar, punctuation, and spelling.
+- rewrite must be clearer, more professional, and less ambiguous.
+- If no issue exists, return empty issues array.
+- Keep "term" short and exact.
+- Do not use placeholders like [exact noun].
+- Analyze the actual text dynamically.
+
+User text:
+{text}
+""".strip()
+
+
+def _extract_raw_text_from_response(data: Dict[str, Any]) -> str:
+    candidates = data.get("candidates", [])
+    if not candidates:
+        return ""
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    if not parts:
+        return ""
+
+    return "".join(part.get("text", "") for part in parts).strip()
+
+
+def _extract_json_candidates(raw_text: str) -> List[str]:
+    candidates: List[str] = []
+
+    if not raw_text:
+        return candidates
+
+    candidates.append(raw_text.strip())
+
+    fenced = re.findall(r"```json\s*(\{.*?\})\s*```", raw_text, flags=re.DOTALL)
+    candidates.extend([item.strip() for item in fenced if item.strip()])
+
+    fenced_any = re.findall(r"```\s*(\{.*?\})\s*```", raw_text, flags=re.DOTALL)
+    candidates.extend([item.strip() for item in fenced_any if item.strip()])
+
+    first = raw_text.find("{")
+    last = raw_text.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        candidates.append(raw_text[first:last + 1].strip())
+
+    # unique preserve order
+    seen = set()
+    unique_candidates = []
+    for item in candidates:
+      if item not in seen:
+        seen.add(item)
+        unique_candidates.append(item)
+
+    return unique_candidates
+
+
+def _try_parse_analysis(raw_text: str) -> Dict[str, Any] | None:
+    for candidate in _extract_json_candidates(raw_text):
+        parsed = _safe_json_load(candidate)
+        if isinstance(parsed, dict):
+            return parsed
+    return None
+
+
+def _salvage_from_plain_text(text: str, raw_text: str) -> Dict[str, Any]:
+    """
+    Fallback when Gemini returns plain text instead of JSON.
+    We still return something useful instead of failing.
+    """
+    corrected_text = text
+    rewrite = text
+    issues: List[Dict[str, Any]] = []
+
+    corrected_match = re.search(
+        r"(corrected_text|corrected sentence)\s*[:\-]\s*(.+)",
+        raw_text,
+        flags=re.IGNORECASE
+    )
+    rewrite_match = re.search(
+        r"(rewrite|professional rewrite)\s*[:\-]\s*(.+)",
+        raw_text,
+        flags=re.IGNORECASE
+    )
+
+    if corrected_match:
+        corrected_text = corrected_match.group(2).strip()
+
+    if rewrite_match:
+        rewrite = rewrite_match.group(2).strip()
+
+    # if still same, use first non-empty lines from raw output
+    lines = [line.strip(" -*\t") for line in raw_text.splitlines() if line.strip()]
+    useful_lines = [line for line in lines if len(line.split()) >= 3]
+
+    if corrected_text == text and useful_lines:
+        corrected_text = useful_lines[0]
+
+    if rewrite == text and len(useful_lines) > 1:
+        rewrite = useful_lines[1]
+    elif rewrite == text and useful_lines:
+        rewrite = useful_lines[0]
+
+    if corrected_text == text and rewrite == text:
+        # still nothing usable, return soft fallback
+        return {
+            "issues": [],
+            "corrected_text": text,
+            "rewrite": text,
+            "error": "RAA could not generate a structured analysis. Please try again."
+        }
+
+    return {
+        "issues": issues,
+        "corrected_text": corrected_text,
+        "rewrite": rewrite,
+        "error": ""
+    }
+
+
 def analyze_with_ai(text: str) -> Dict[str, Any]:
     text = (text or "").strip()
 
     if not text:
         return _error_result("", "Text is empty.")
 
-    # Ultra-fast repeated result
     if text in CACHE:
         return CACHE[text]
 
-    # Skip unnecessary AI call for extremely short text
     if len(text.split()) < 2:
         return _success_result(text, [], text, text)
 
     if not GEMINI_API_KEY:
         return _error_result(text, "RAA configuration error: GEMINI_API_KEY is missing.")
-
-    prompt = _build_prompt(text)
 
     payload = {
         "system_instruction": {
@@ -174,20 +270,19 @@ def analyze_with_ai(text: str) -> Dict[str, Any]:
         "contents": [
             {
                 "parts": [
-                    {"text": prompt}
+                    {"text": _build_prompt(text)}
                 ]
             }
         ],
         "generationConfig": {
-            "temperature": 0.1,
+            "temperature": 0.05,
             "topP": 0.8,
             "topK": 20,
-            "maxOutputTokens": 800,
+            "maxOutputTokens": 700,
             "responseMimeType": "application/json"
         }
     }
 
-    # Reduced retry count for faster response
     retry_delays = [1, 2]
     last_error = ""
 
@@ -200,27 +295,25 @@ def analyze_with_ai(text: str) -> Dict[str, Any]:
                     "X-goog-api-key": GEMINI_API_KEY
                 },
                 json=payload,
-                timeout=25
+                timeout=20
             )
 
             if response.status_code == 200:
                 data = response.json()
-                candidates = data.get("candidates", [])
+                raw_text = _extract_raw_text_from_response(data)
 
-                if not candidates:
-                    return _error_result(text, "RAA could not generate a response.")
+                parsed = _try_parse_analysis(raw_text)
 
-                parts = candidates[0].get("content", {}).get("parts", [])
-                raw_text = "".join(part.get("text", "") for part in parts).strip()
-
-                json_text = _extract_json_block(raw_text)
-                if not json_text:
-                    return _error_result(
-                        text,
-                        "RAA could not read the AI response correctly. Please try again."
-                    )
-
-                parsed = _safe_json_load(json_text)
+                if parsed is None:
+                    fallback = _salvage_from_plain_text(text, raw_text)
+                    if not fallback.get("error"):
+                        return _success_result(
+                            text,
+                            fallback.get("issues", []),
+                            fallback.get("corrected_text", text),
+                            fallback.get("rewrite", text)
+                        )
+                    return _error_result(text, fallback["error"])
 
                 issues_raw = parsed.get("issues", [])
                 if not isinstance(issues_raw, list):
@@ -236,25 +329,17 @@ def analyze_with_ai(text: str) -> Dict[str, Any]:
                 corrected_text = _normalize_string(parsed.get("corrected_text"), text) or text
                 rewrite = _normalize_string(parsed.get("rewrite"), corrected_text) or corrected_text
 
-                if corrected_text.strip() == text.strip() and issues:
-                    # Keep rewrite stronger even when corrected text is close to original
-                    rewrite = rewrite if rewrite.strip() else corrected_text
-
                 if rewrite.strip() == text.strip() and corrected_text.strip() != text.strip():
                     rewrite = corrected_text
 
                 return _success_result(text, issues, corrected_text, rewrite)
 
-            # Temporary service overloads
             if response.status_code in {429, 500, 502, 503, 504}:
                 last_error = f"Temporary service issue: {response.status_code}"
                 if attempt < len(retry_delays):
                     time.sleep(delay)
                     continue
-                return _error_result(
-                    text,
-                    "RAA is currently busy. Please try again in a moment."
-                )
+                return _error_result(text, "RAA is currently busy. Please try again in a moment.")
 
             return _error_result(
                 text,
