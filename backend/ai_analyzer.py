@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import Any, Dict, List
 
 import requests
@@ -36,42 +37,14 @@ def _normalize_list(value: Any) -> List[str]:
 
 
 def _normalize_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
-    issue_type = _normalize_string(issue.get("issue_type"), "style")
-    category = _normalize_string(issue.get("category"), "Style")
-    severity = _normalize_string(issue.get("severity"), "Medium")
-
-    allowed_issue_types = {
-        "grammar",
-        "spelling",
-        "punctuation",
-        "wrong_verb_form",
-        "unclear_pronoun",
-        "ambiguous_structure",
-        "misplaced_modifier",
-        "confusing_construction",
-        "vague_word",
-        "vague_time",
-        "vague_quantity",
-        "unspecified_actor",
-        "double_negative",
-        "multiple_meaning",
-        "style",
-    }
-
-    if issue_type not in allowed_issue_types:
-        issue_type = "style"
-
-    if severity not in {"Low", "Medium", "High"}:
-        severity = "Medium"
-
     return {
         "term": _normalize_string(issue.get("term")),
-        "issue_type": issue_type,
-        "category": category,
+        "issue_type": _normalize_string(issue.get("issue_type"), "style"),
+        "category": _normalize_string(issue.get("category"), "Style"),
         "explanation": _normalize_string(issue.get("explanation")),
         "suggestion": _normalize_string(issue.get("suggestion")),
         "replacement": _normalize_string(issue.get("replacement")),
-        "severity": severity,
+        "severity": _normalize_string(issue.get("severity"), "Medium"),
         "alternatives": _normalize_list(issue.get("alternatives")),
         "meanings": _normalize_list(issue.get("meanings")),
     }
@@ -114,14 +87,18 @@ User text:
 """.strip()
 
 
+def _error_result(text: str, message: str) -> Dict[str, Any]:
+    return {
+        "issues": [],
+        "corrected_text": text,
+        "rewrite": text,
+        "error": message
+    }
+
+
 def analyze_with_ai(text: str) -> Dict[str, Any]:
     if not GEMINI_API_KEY:
-        return {
-            "issues": [],
-            "corrected_text": text,
-            "rewrite": text,
-            "error": "GEMINI_API_KEY is missing in Render environment variables."
-        }
+        return _error_result(text, "GEMINI_API_KEY is missing in Render environment variables.")
 
     prompt = _build_prompt(text)
 
@@ -147,79 +124,85 @@ def analyze_with_ai(text: str) -> Dict[str, Any]:
         }
     }
 
-    try:
-        response = requests.post(
-            GEMINI_URL,
-            headers={
-                "Content-Type": "application/json",
-                "X-goog-api-key": GEMINI_API_KEY
-            },
-            json=payload,
-            timeout=90
-        )
+    # Retry on temporary overloads
+    retry_delays = [1, 2, 4, 8]
 
-        if response.status_code != 200:
-            return {
-                "issues": [],
-                "corrected_text": text,
-                "rewrite": text,
-                "error": f"Gemini API failed: {response.status_code} - {response.text}"
-            }
+    last_error = ""
+    for attempt, delay in enumerate(retry_delays, start=1):
+        try:
+            response = requests.post(
+                GEMINI_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-goog-api-key": GEMINI_API_KEY
+                },
+                json=payload,
+                timeout=90
+            )
 
-        data = response.json()
-        candidates = data.get("candidates", [])
+            if response.status_code == 200:
+                data = response.json()
+                candidates = data.get("candidates", [])
 
-        if not candidates:
-            return {
-                "issues": [],
-                "corrected_text": text,
-                "rewrite": text,
-                "error": "Gemini returned no candidates."
-            }
+                if not candidates:
+                    return _error_result(text, "Gemini returned no candidates.")
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        raw_text = "".join(part.get("text", "") for part in parts).strip()
+                parts = candidates[0].get("content", {}).get("parts", [])
+                raw_text = "".join(part.get("text", "") for part in parts).strip()
 
-        json_text = _extract_json_block(raw_text)
-        if not json_text:
-            return {
-                "issues": [],
-                "corrected_text": text,
-                "rewrite": text,
-                "error": f"Gemini did not return valid JSON. Raw output: {raw_text[:500]}"
-            }
+                json_text = _extract_json_block(raw_text)
+                if not json_text:
+                    return _error_result(
+                        text,
+                        f"Gemini did not return valid JSON. Raw output: {raw_text[:500]}"
+                    )
 
-        parsed = _safe_json_load(json_text)
+                parsed = _safe_json_load(json_text)
 
-        issues_raw = parsed.get("issues", [])
-        if not isinstance(issues_raw, list):
-            issues_raw = []
+                issues_raw = parsed.get("issues", [])
+                if not isinstance(issues_raw, list):
+                    issues_raw = []
 
-        issues: List[Dict[str, Any]] = []
-        for issue in issues_raw:
-            if isinstance(issue, dict):
-                normalized = _normalize_issue(issue)
-                if normalized["term"] or normalized["explanation"]:
-                    issues.append(normalized)
+                issues: List[Dict[str, Any]] = []
+                for issue in issues_raw:
+                    if isinstance(issue, dict):
+                        normalized = _normalize_issue(issue)
+                        if normalized["term"] or normalized["explanation"]:
+                            issues.append(normalized)
 
-        corrected_text = _normalize_string(parsed.get("corrected_text"), text) or text
-        rewrite = _normalize_string(parsed.get("rewrite"), corrected_text) or corrected_text
+                corrected_text = _normalize_string(parsed.get("corrected_text"), text) or text
+                rewrite = _normalize_string(parsed.get("rewrite"), corrected_text) or corrected_text
 
-        # Make rewrite more useful if model returns same weak text
-        if rewrite.strip() == text.strip() and corrected_text.strip() != text.strip():
-            rewrite = corrected_text
+                if rewrite.strip() == text.strip() and corrected_text.strip() != text.strip():
+                    rewrite = corrected_text
 
-        return {
-            "issues": issues,
-            "corrected_text": corrected_text,
-            "rewrite": rewrite,
-            "error": ""
-        }
+                return {
+                    "issues": issues,
+                    "corrected_text": corrected_text,
+                    "rewrite": rewrite,
+                    "error": ""
+                }
 
-    except Exception as e:
-        return {
-            "issues": [],
-            "corrected_text": text,
-            "rewrite": text,
-            "error": str(e)
-        }
+            # Retry only on temporary service problems
+            if response.status_code in {429, 500, 502, 503, 504}:
+                last_error = f"Gemini temporary error {response.status_code}: {response.text}"
+                if attempt < len(retry_delays):
+                    time.sleep(delay)
+                    continue
+                return _error_result(
+                    text,
+                    "RAA is currently busy. Please try again in a moment."
+                )
+
+
+        except requests.Timeout:
+            last_error = "Gemini request timed out."
+            if attempt < len(retry_delays):
+                time.sleep(delay)
+                continue
+            return _error_result(text, "RAA request timed out. Please try again.")
+
+        except Exception as e:
+            return _error_result(text, str(e))
+
+    return _error_result(text, last_error = "RAA request timed out.")
