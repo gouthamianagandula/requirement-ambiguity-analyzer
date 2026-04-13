@@ -103,7 +103,8 @@ Text:
             text={
                 "format": {
                     "type": "json_schema",
-                    "json_schema": ANALYSIS_SCHEMA
+                    "name": "ambiguity_analysis",
+                    "schema": ANALYSIS_SCHEMA["schema"]
                 }
             }
         )
