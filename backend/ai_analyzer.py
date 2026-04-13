@@ -53,36 +53,34 @@ def analyze_with_ai(text: str) -> Dict[str, Any]:
         }
 
     prompt = f"""
-You are an advanced English ambiguity and writing-quality analyzer.
+You are a professional English writing assistant like Grammarly and QuillBot.
 
-Analyze ANY user-provided sentence or paragraph.
+Analyze the given text deeply.
 
-Detect:
-- grammar errors
-- spelling mistakes
-- punctuation mistakes
-- wrong verb forms
-- unclear pronouns
-- ambiguous sentence structures
-- misplaced modifiers
-- confusing sentence constructions
-- vague words
-- multiple-meaning words
-- double negatives
+You MUST:
 
-Rules:
-- Do NOT hardcode known example sentences.
-- Analyze the actual input dynamically.
-- Do NOT return placeholders like [exact noun].
-- Use natural English.
-- If a sentence is grammatically correct but ambiguous, keep corrected_text close to the original and improve rewrite.
-- If the input is a paragraph, analyze all sentences and produce one corrected_text and one rewrite for the full paragraph.
-- Return JSON only.
+1. Detect grammar errors
+2. Detect spelling mistakes
+3. Detect punctuation mistakes
+4. Detect unclear pronouns (he, she, it, they, this, that)
+5. Detect ambiguous or unclear sentences
+6. Detect vague words (soon, fast, many, some, etc.)
+7. Detect wrong verb forms
+8. Detect double negatives
+9. Detect confusing sentence structure
 
-Return exactly this JSON shape:
-{{
+STRICT RULES:
+- Do NOT copy input sentence
+- Do NOT return same sentence as corrected_text
+- Always improve sentence clarity
+- Rewrite MUST be professional and clear
+- Highlight ONLY incorrect words
+
+Return JSON only:
+
+{
   "issues": [
-    {{
+    {
       "term": "",
       "issue_type": "",
       "category": "",
@@ -92,11 +90,11 @@ Return exactly this JSON shape:
       "severity": "",
       "alternatives": [],
       "meanings": []
-    }}
+    }
   ],
   "corrected_text": "",
   "rewrite": ""
-}}
+}
 
 Text:
 {text}
