@@ -69,28 +69,48 @@ def _find_nearest_subject_before(text: str, pronoun: str) -> str:
     if not nouns:
         return ""
 
-    filtered = [w for w in nouns if w.lower() not in {
-        "the", "a", "an", "and", "or", "but", "with", "from", "into",
-        "that", "this", "these", "those", "shall", "should", "must",
-        "will", "can", "may", "was", "were", "is", "are", "be", "been"
-    }]
+    filtered = [
+        w for w in nouns
+        if w.lower() not in {
+            "the", "a", "an", "and", "or", "but", "with", "from", "into",
+            "that", "this", "these", "those", "shall", "should", "must",
+            "will", "can", "may", "was", "were", "is", "are", "be", "been"
+        }
+    ]
     return filtered[-1] if filtered else ""
 
 
-def _pattern_specific_rewrite(text: str):
-    lower = text.strip().lower()
-    mapping = {
-        "i saw a girl with a telescope.": "I used a telescope to see a girl.",
-        "ravi told ramesh that he was late.": 'Ravi told Ramesh, "You are late."',
-        "visiting relatives can be boring.": "It can be boring to visit relatives.",
-        "she gave her dog food.": "She gave food to her dog.",
-        "the teacher told the student that she was wrong.": 'The teacher told the student, "You are wrong."',
-        "he saw the man on the hill with a camera.": "He used a camera to see the man on the hill.",
-        "they are cooking apples.": "They are cooking the apples.",
-        "i left her book on the table.": "I left her book on the table for her.",
-        "old men and women were sitting there.": "Old men and old women were sitting there.",
-    }
-    return mapping.get(lower)
+def _choose_best_alternative(detected_items):
+    """
+    Use dynamic alternatives coming from detector issues.
+    No hardcoded sentence mapping here.
+    """
+    ranked = []
+    for item in detected_items:
+        alternatives = item.get("alternatives") or []
+        if not alternatives:
+            continue
+
+        severity = (item.get("severity") or "").lower()
+        score = 0
+        if severity == "high":
+            score += 3
+        elif severity == "medium":
+            score += 2
+        else:
+            score += 1
+
+        issue_type = item.get("issue_type", "")
+        if issue_type in {"ambiguous_structure", "unclear_pronoun", "misplaced_modifier"}:
+            score += 3
+
+        ranked.append((score, alternatives[0]))
+
+    if not ranked:
+        return ""
+
+    ranked.sort(key=lambda x: x[0], reverse=True)
+    return ranked[0][1]
 
 
 def _apply_replacements(text, detected_items):
@@ -112,6 +132,7 @@ def _apply_replacements(text, detected_items):
         elif issue_type == "unclear_pronoun":
             pronoun = original.lower()
             antecedent = replacement if replacement else _find_nearest_subject_before(rewritten, original)
+
             if antecedent and pronoun in {"he", "she", "his", "her", "it", "this", "that"}:
                 rewritten = _replace_word(rewritten, original, antecedent)
             elif antecedent and pronoun in {"they", "them", "their", "these", "those"}:
@@ -128,12 +149,15 @@ def _apply_replacements(text, detected_items):
             rewritten = re.sub(r"\bnot no\b", "no", rewritten, flags=re.IGNORECASE)
             rewritten = re.sub(r"\bnever no\b", "no", rewritten, flags=re.IGNORECASE)
 
-        elif issue_type == "multiple_meaning":
-            pass
-
         elif issue_type in {"grammar", "wrong_verb_form", "spelling", "punctuation", "casing", "style"}:
             if replacement:
-                rewritten = re.sub(re.escape(original), replacement, rewritten, count=1, flags=re.IGNORECASE)
+                rewritten = re.sub(
+                    re.escape(original),
+                    replacement,
+                    rewritten,
+                    count=1,
+                    flags=re.IGNORECASE
+                )
 
     return _clean_spaces(rewritten)
 
@@ -167,11 +191,15 @@ def _split_overlong_sentences(text: str) -> str:
 
 
 def generate_rewrite(text, detected_items, corrected_text=None):
-    pattern_rewrite = _pattern_specific_rewrite(text)
-    if pattern_rewrite:
-        return pattern_rewrite
+    """
+    General rewrite only.
+    1. Prefer detector-generated alternatives if available.
+    2. Otherwise use corrected text.
+    3. Then apply general cleanup and normalization.
+    """
+    dynamic_alternative = _choose_best_alternative(detected_items)
+    base = dynamic_alternative if dynamic_alternative else (corrected_text if corrected_text else text)
 
-    base = corrected_text if corrected_text else text
     base = _apply_replacements(base, detected_items)
     base = _split_overlong_sentences(base)
     base = _normalize_requirement_style(base)

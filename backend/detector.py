@@ -5,8 +5,7 @@ from pathlib import Path
 from functools import lru_cache
 from typing import Dict, List, Tuple, Any
 
-import nltk
-from nltk import pos_tag
+import spacy
 from spellchecker import SpellChecker
 import language_tool_python
 from language_tool_python.utils import correct as lt_correct
@@ -17,7 +16,7 @@ DATA_FILE = BASE_DIR / "data" / "ambiguous_words.json"
 
 SPELL = SpellChecker()
 
-FILE_TERMS = {}
+FILE_TERMS: Dict[str, Dict[str, str]] = {}
 if DATA_FILE.exists():
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -84,7 +83,7 @@ DEFAULT_TERMS = {
     },
     "and/or": {
         "category": "Logical Ambiguity",
-        "explanation": "The phrase 'and/or' can be interpreted in more than one way.",
+        "explanation": "The phrase can be interpreted in more than one way.",
         "suggestion": "Choose either 'and' or 'or'.",
         "severity": "High",
         "replacement": "or",
@@ -120,20 +119,22 @@ for key, value in FILE_TERMS.items():
 for key, value in DEFAULT_TERMS.items():
     TERMS[key.lower()] = value
 
-UNCLEAR_PRONOUNS = {"he", "she", "his", "her", "it", "they", "them", "their", "this", "that", "these", "those"}
 NEGATIVE_TERMS = {
     "not", "no", "never", "nothing", "nobody", "none", "neither",
     "nowhere", "hardly", "scarcely", "barely", "cannot", "can't",
-    "won't", "don't", "doesn't", "isn't", "aren't", "wasn't", "weren't"
+    "won't", "don't", "doesn't", "isn't", "aren't", "wasn't", "weren't",
 }
-MULTI_MEANING_MAP = {
+
+PRONOUNS = {"he", "she", "his", "her", "it", "they", "them", "their", "this", "that", "these", "those"}
+
+MULTI_MEANING_WORDS = {
     "file": ["document", "computer file", "filing record"],
     "record": ["saved data entry", "audio recording", "official document"],
     "port": ["network port", "physical connector", "harbor"],
     "charge": ["electrical charge", "fee", "accusation"],
     "issue": ["problem", "version or release", "publication issue"],
     "state": ["condition", "stored status", "political region"],
-    "run": ["execute software", "operate continuously", "physical running"],
+    "run": ["execute software", "operate continuously", "physical activity"],
     "table": ["data table", "piece of furniture", "postpone for discussion"],
     "current": ["present time", "electrical flow", "water movement"],
     "draft": ["initial version", "air flow", "selection process"],
@@ -141,23 +142,32 @@ MULTI_MEANING_MAP = {
     "light": ["illumination", "not heavy", "ignite"],
     "lead": ["guide", "metal", "main advantage"],
     "address": ["location", "speak to", "handle a problem"],
-    "bank": ["financial institution", "river side", "store or rely on"],
+    "bank": ["financial institution", "river bank", "store or rely on"],
+    "case": ["instance", "container", "legal matter"],
+    "block": ["prevent", "group", "physical piece"],
 }
 
+ATTACHMENT_PREPOSITIONS = {"with", "by", "in", "on", "at", "near", "for", "from"}
+LEADING_MODIFIER_WORDS = {"using", "based", "after", "before", "while", "when", "having"}
 
-def ensure_nltk_data():
-    packages = [
-        "averaged_perceptron_tagger",
-        "averaged_perceptron_tagger_eng",
-    ]
-    for pkg in packages:
-        try:
-            nltk.download(pkg, quiet=True)
-        except Exception:
-            pass
+SUBORDINATE_MARKERS = {"because", "although", "while", "when", "if", "unless", "whereas", "since"}
+
+# -----------------------------
+# Load NLP tools
+# -----------------------------
 
 
-ensure_nltk_data()
+@lru_cache(maxsize=1)
+def get_nlp():
+    model_name = os.getenv("SPACY_MODEL", "en_core_web_sm")
+    try:
+        return spacy.load(model_name)
+    except Exception:
+        # fallback so app still runs, but real ambiguity features need the model
+        nlp = spacy.blank("en")
+        if "sentencizer" not in nlp.pipe_names:
+            nlp.add_pipe("sentencizer")
+        return nlp
 
 
 @lru_cache(maxsize=1)
@@ -167,6 +177,11 @@ def get_language_tool():
     if remote_url:
         return language_tool_python.LanguageTool(language, remote_server=remote_url)
     return language_tool_python.LanguageTool(language)
+
+
+# -----------------------------
+# Helpers
+# -----------------------------
 
 
 def normalize_text(text: str) -> str:
@@ -186,10 +201,7 @@ def split_into_sentences(text: str) -> List[Tuple[str, int]]:
 
 
 def tokenize_with_offsets(text: str) -> List[Tuple[str, int, int]]:
-    results = []
-    for m in re.finditer(r"\b[\w'-]+\b", text):
-        results.append((m.group(0), m.start(), m.end()))
-    return results
+    return [(m.group(0), m.start(), m.end()) for m in re.finditer(r"\b[\w'-]+\b", text)]
 
 
 def build_issue(
@@ -249,6 +261,23 @@ def _find_term_matches(text: str, term: str):
     return list(pattern.finditer(text))
 
 
+def _char_span_from_token(doc, token, offset: int) -> Tuple[int, int]:
+    return offset + token.idx, offset + token.idx + len(token.text)
+
+
+def _sentence_subject_nouns(sent_doc) -> List[str]:
+    nouns = []
+    for token in sent_doc:
+        if token.dep_ in {"nsubj", "nsubjpass"} and token.pos_ in {"NOUN", "PROPN", "PRON"}:
+            nouns.append(token.text)
+    return nouns
+
+
+# -----------------------------
+# General detectors
+# -----------------------------
+
+
 def detect_keyword_terms(text: str, offset: int = 0) -> List[Dict[str, Any]]:
     results = []
     for term, details in TERMS.items():
@@ -286,352 +315,317 @@ def detect_repeated_words(text: str, offset: int = 0) -> List[Dict[str, Any]]:
     return issues
 
 
-def _extract_simple_nouns(words: List[str]) -> List[str]:
-    if not words:
-        return []
-    tags = pos_tag(words)
-    nouns = []
-    for word, tag in tags:
-        if tag.startswith("NN") and len(word) > 1:
-            nouns.append(word)
-    return nouns
-
-
-def detect_unclear_pronouns(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
+def detect_multiple_meanings_spacy(sent_doc, offset: int) -> List[Dict[str, Any]]:
     issues = []
-    tokens = tokenize_with_offsets(sentence)
-    words = [w for w, _, _ in tokens]
-    nouns = _extract_simple_nouns(words)
-
-    if len(words) < 3:
-        return issues
-
-    for idx, (word, start, end) in enumerate(tokens):
-        lower = word.lower()
-        if lower not in UNCLEAR_PRONOUNS:
-            continue
-
-        before_words = words[:idx]
-        before_nouns = _extract_simple_nouns(before_words)
-        suggested = before_nouns[-1] if before_nouns else ""
-
-        should_flag = False
-        if idx == 0:
-            should_flag = True
-        elif len(before_nouns) >= 2 and lower in {"he", "she", "his", "her", "it", "they", "this", "that"}:
-            should_flag = True
-        elif lower in {"this", "that", "these", "those"} and len(nouns) >= 2:
-            should_flag = True
-
-        if should_flag:
+    for token in sent_doc:
+        lower = token.text.lower()
+        meanings = MULTI_MEANING_WORDS.get(lower)
+        if meanings and token.pos_ in {"NOUN", "VERB", "ADJ"}:
+            start, end = _char_span_from_token(sent_doc, token, offset)
             issues.append(build_issue(
-                term=word,
-                start=offset + start,
-                end=offset + end,
-                category="Unclear Pronoun",
-                explanation="The pronoun may not clearly refer to one exact noun.",
-                suggestion="Replace the pronoun with the exact noun.",
-                severity="Medium",
-                replacement=suggested,
-                issue_type="unclear_pronoun",
-                source="rules",
-            ))
-    return issues
-
-
-def detect_double_negative(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
-    issues = []
-    negatives = [(w, s, e) for w, s, e in tokenize_with_offsets(sentence) if w.lower() in NEGATIVE_TERMS]
-    if len(negatives) >= 2:
-        first = negatives[0]
-        last = negatives[-1]
-        issues.append(build_issue(
-            term=sentence[first[1]:last[2]],
-            start=offset + first[1],
-            end=offset + last[2],
-            category="Double Negative",
-            explanation="The sentence contains multiple negative terms and may be confusing.",
-            suggestion="Rewrite with one clear negative or a positive statement.",
-            severity="High",
-            replacement="",
-            issue_type="double_negative",
-            source="rules",
-        ))
-    return issues
-
-
-def detect_ambiguous_structure(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
-    issues = []
-    patterns = [
-        (r"\band/or\b", "The phrase 'and/or' is ambiguous.", "Choose either 'and' or 'or'."),
-        (r"\bif\b.*\bthen\b.*\band\b.*\bor\b", "The condition may be ambiguous.", "Split the logic into smaller clear statements."),
-        (r"\bunless\b.*\bexcept\b", "The exception logic may be hard to interpret.", "Rewrite the condition more clearly."),
-    ]
-    for pattern, explanation, suggestion in patterns:
-        for m in re.finditer(pattern, sentence, flags=re.IGNORECASE):
-            issues.append(build_issue(
-                term=m.group(0),
-                start=offset + m.start(),
-                end=offset + m.end(),
-                category="Ambiguous Structure",
-                explanation=explanation,
-                suggestion=suggestion,
-                severity="High",
-                replacement="",
-                issue_type="ambiguous_structure",
-                source="rules",
-            ))
-
-    token_count = len(tokenize_with_offsets(sentence))
-    comma_count = sentence.count(",")
-    if token_count >= 28 or comma_count >= 3:
-        issues.append(build_issue(
-            term=sentence,
-            start=offset,
-            end=offset + len(sentence),
-            category="Confusing Construction",
-            explanation="The sentence is long or nested and may be hard to understand.",
-            suggestion="Split it into shorter sentences.",
-            severity="Medium",
-            replacement="",
-            issue_type="confusing_construction",
-            source="rules",
-        ))
-
-    return issues
-
-
-def detect_wrong_verb_forms(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
-    issues = []
-    tokens = tokenize_with_offsets(sentence)
-    words = [w for w, _, _ in tokens]
-    if not words:
-        return issues
-
-    tags = pos_tag(words)
-
-    for i in range(len(tags) - 1):
-        word, _tag = tags[i]
-        _next_word, next_tag = tags[i + 1]
-        lower = word.lower()
-
-        if lower in {"shall", "should", "must", "can", "may", "will"} and next_tag in {"VBD", "VBN"}:
-            tok = tokens[i + 1]
-            issues.append(build_issue(
-                term=tok[0],
-                start=offset + tok[1],
-                end=offset + tok[2],
-                category="Wrong Verb Form",
-                explanation="A modal verb is usually followed by the base form of a verb.",
-                suggestion="Use the base form of the verb after the modal.",
-                severity="Medium",
-                replacement="",
-                issue_type="wrong_verb_form",
-                source="rules",
-            ))
-
-        if lower in {"he", "she", "it"} and next_tag == "VB":
-            tok = tokens[i + 1]
-            issues.append(build_issue(
-                term=tok[0],
-                start=offset + tok[1],
-                end=offset + tok[2],
-                category="Wrong Verb Form",
-                explanation="The verb form may not agree with the singular subject.",
-                suggestion="Use the correct singular verb form.",
-                severity="Medium",
-                replacement="",
-                issue_type="wrong_verb_form",
-                source="rules",
-            ))
-
-        if lower == "they" and next_tag == "VBZ":
-            tok = tokens[i + 1]
-            issues.append(build_issue(
-                term=tok[0],
-                start=offset + tok[1],
-                end=offset + tok[2],
-                category="Wrong Verb Form",
-                explanation="The verb form may not agree with the plural subject.",
-                suggestion="Use the correct plural verb form.",
-                severity="Medium",
-                replacement="",
-                issue_type="wrong_verb_form",
-                source="rules",
-            ))
-
-    return issues
-
-
-def detect_multiple_meanings(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
-    issues = []
-    for word, start, end in tokenize_with_offsets(sentence):
-        lower = word.lower()
-        meanings = MULTI_MEANING_MAP.get(lower)
-        if meanings:
-            issues.append(build_issue(
-                term=word,
-                start=offset + start,
-                end=offset + end,
+                term=token.text,
+                start=start,
+                end=end,
                 category="Multiple Meanings",
                 explanation="This word may have more than one meaning in English.",
                 suggestion="Use a more specific term if the context is technical or strict.",
                 severity="Medium",
                 replacement="",
                 issue_type="multiple_meaning",
-                source="rules",
+                source="spacy",
                 meanings=meanings,
             ))
     return issues
 
 
-def detect_misplaced_modifier(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
+def detect_unclear_pronouns_spacy(sent_doc, offset: int) -> List[Dict[str, Any]]:
     issues = []
-    pattern = re.compile(r"^(Using|Based on|After|Before|While|When)\b[^,]{5,},", re.IGNORECASE)
-    match = pattern.search(sentence.strip())
-    if not match:
-        return issues
+    nouns_before = [t for t in sent_doc if t.pos_ in {"NOUN", "PROPN"}]
 
-    after = sentence[match.end():].strip()
-    words = re.findall(r"\b[A-Za-z][A-Za-z'-]*\b", after)
-    if not words:
-        return issues
+    for token in sent_doc:
+        lower = token.text.lower()
+        if lower not in PRONOUNS or token.pos_ != "PRON":
+            continue
 
-    first_word = words[0].lower()
-    if first_word in {"it", "they", "this", "that", "these", "those"}:
-        issues.append(build_issue(
-            term=match.group(0),
-            start=offset + match.start(),
-            end=offset + match.end(),
-            category="Misplaced Modifier",
-            explanation="The opening phrase may not clearly modify the correct subject.",
-            suggestion="Rewrite the sentence so the subject directly follows the opening phrase.",
-            severity="Medium",
-            replacement="",
-            issue_type="misplaced_modifier",
-            source="rules",
-        ))
+        antecedent_candidates = []
+        for prev in sent_doc:
+            if prev.i >= token.i:
+                break
+            if prev.pos_ in {"NOUN", "PROPN"}:
+                antecedent_candidates.append(prev)
+
+        if len(antecedent_candidates) >= 2:
+            start, end = _char_span_from_token(sent_doc, token, offset)
+            suggestion = "Replace the pronoun with the exact noun."
+            replacement = antecedent_candidates[-1].text
+            issues.append(build_issue(
+                term=token.text,
+                start=start,
+                end=end,
+                category="Unclear Pronoun",
+                explanation="The pronoun may refer to more than one earlier noun.",
+                suggestion=suggestion,
+                severity="High",
+                replacement=replacement,
+                issue_type="unclear_pronoun",
+                source="spacy",
+                alternatives=[
+                    f"Replace '{token.text}' with '{cand.text}'." for cand in antecedent_candidates[-2:]
+                ],
+            ))
+        elif lower in {"this", "that", "these", "those"} and len(nouns_before) >= 2:
+            start, end = _char_span_from_token(sent_doc, token, offset)
+            issues.append(build_issue(
+                term=token.text,
+                start=start,
+                end=end,
+                category="Unclear Pronoun",
+                explanation="This pointing word may not clearly refer to one exact item.",
+                suggestion="Replace it with the exact noun.",
+                severity="Medium",
+                replacement=nouns_before[-1].text,
+                issue_type="unclear_pronoun",
+                source="spacy",
+            ))
     return issues
 
 
-def detect_pattern_ambiguities(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
+def detect_attachment_ambiguity_spacy(sent_doc, offset: int) -> List[Dict[str, Any]]:
     issues = []
-    s = sentence.strip()
-    lower = s.lower()
+    text = sent_doc.text
 
-    patterns = [
-        {
-            "check": lower == "i saw a girl with a telescope.",
-            "term": "with a telescope",
-            "alternatives": [
-                "I used a telescope to see a girl.",
-                "I saw a girl who was holding a telescope."
-            ],
-            "explanation": "The phrase 'with a telescope' can modify either 'I saw' or 'a girl'.",
-        },
-        {
-            "check": lower == "ravi told ramesh that he was late.",
-            "term": "he",
-            "alternatives": [
-                'Ravi told Ramesh, "You are late."',
-                "Ravi told Ramesh that Ravi was late."
-            ],
-            "explanation": "The pronoun 'he' may refer to Ravi or Ramesh.",
-        },
-        {
-            "check": lower == "visiting relatives can be boring.",
-            "term": "visiting relatives",
-            "alternatives": [
-                "It can be boring to visit relatives.",
-                "Relatives who are visiting can be boring."
-            ],
-            "explanation": "The phrase can mean either the action of visiting relatives or relatives who are visiting.",
-        },
-        {
-            "check": lower == "she gave her dog food.",
-            "term": "her dog food",
-            "alternatives": [
-                "She gave food to her dog.",
-                "She gave her dog some food that she had."
-            ],
-            "explanation": "It is unclear whether 'dog food' is food for the dog or the object she gave.",
-        },
-        {
-            "check": lower == "the teacher told the student that she was wrong.",
-            "term": "she",
-            "alternatives": [
-                'The teacher told the student, "You are wrong."',
-                "The teacher told the student that the teacher was wrong."
-            ],
-            "explanation": "The pronoun 'she' may refer to the teacher or the student.",
-        },
-        {
-            "check": lower == "he saw the man on the hill with a camera.",
-            "term": "with a camera",
-            "alternatives": [
-                "He used a camera to see the man on the hill.",
-                "He saw a man who was on the hill and had a camera."
-            ],
-            "explanation": "It is unclear who has the camera.",
-        },
-        {
-            "check": lower == "they are cooking apples.",
-            "term": "cooking apples",
-            "alternatives": [
-                "They are cooking the apples.",
-                "The apples are cooking apples."
-            ],
-            "explanation": "The sentence may refer to an action or to a type of apples.",
-        },
-        {
-            "check": lower == "i left her book on the table.",
-            "term": "her book",
-            "alternatives": [
-                "I left her book on the table for her.",
-                "I left the book that belongs to her on the table."
-            ],
-            "explanation": "It is unclear whether 'her' marks ownership or the indirect object.",
-        },
-        {
-            "check": lower == "old men and women were sitting there.",
-            "term": "old men and women",
-            "alternatives": [
-                "Old men and old women were sitting there.",
-                "Old men and women of any age were sitting there."
-            ],
-            "explanation": "It is unclear whether 'old' applies to both men and women or only to men.",
-        },
-    ]
+    for token in sent_doc:
+        if token.dep_ != "prep" or token.text.lower() not in ATTACHMENT_PREPOSITIONS:
+            continue
 
-    for item in patterns:
-        if item["check"]:
-            match = re.search(re.escape(item["term"]), s, flags=re.IGNORECASE)
-            if match:
-                start = offset + match.start()
-                end = offset + match.end()
-            else:
-                start = offset
-                end = offset + len(s)
+        pobj = None
+        for child in token.children:
+            if child.dep_ == "pobj":
+                pobj = child
+                break
+        if pobj is None:
+            continue
+
+        head = token.head
+        earlier_nouns = [t for t in sent_doc if t.i < token.i and t.pos_ in {"NOUN", "PROPN"}]
+        earlier_verbs = [t for t in sent_doc if t.i < token.i and t.pos_ == "VERB"]
+
+        if head.pos_ in {"NOUN", "PROPN"} and earlier_verbs:
+            phrase_start = token.idx
+            phrase_end = pobj.idx + len(pobj.text)
+            phrase = text[phrase_start:phrase_end]
+
+            noun_head = head.text
+            verb_head = earlier_verbs[-1].lemma_
+            alt1 = f"The phrase '{phrase}' describes '{noun_head}'."
+            alt2 = f"The phrase '{phrase}' describes the action '{verb_head}'."
 
             issues.append(build_issue(
-                term=s[match.start():match.end()] if match else s,
-                start=start,
-                end=end,
+                term=phrase,
+                start=offset + phrase_start,
+                end=offset + phrase_end,
                 category="Sentence Ambiguity",
-                explanation=item["explanation"],
-                suggestion="Rewrite the sentence to show only one intended meaning.",
+                explanation="This prepositional phrase may attach to more than one part of the sentence.",
+                suggestion="Rewrite the sentence so the phrase modifies only one intended part.",
                 severity="High",
                 replacement="",
                 issue_type="ambiguous_structure",
-                source="patterns",
-                alternatives=item["alternatives"],
+                source="spacy",
+                alternatives=[alt1, alt2],
+            ))
+    return issues
+
+
+def detect_gerund_or_compound_ambiguity_spacy(sent_doc, offset: int) -> List[Dict[str, Any]]:
+    issues = []
+    text = sent_doc.text
+
+    # Examples like "Visiting relatives can be boring" / "cooking apples"
+    if len(sent_doc) >= 2:
+        first = sent_doc[0]
+        second = sent_doc[1]
+
+        if first.tag_ == "VBG" and second.pos_ in {"NOUN", "PROPN"}:
+            phrase = f"{first.text} {second.text}"
+            start = offset + first.idx
+            end = offset + second.idx + len(second.text)
+            issues.append(build_issue(
+                term=phrase,
+                start=start,
+                end=end,
+                category="Sentence Ambiguity",
+                explanation="This opening phrase may refer either to an action or to a noun phrase.",
+                suggestion="Rewrite the sentence so only one meaning is possible.",
+                severity="High",
+                replacement="",
+                issue_type="ambiguous_structure",
+                source="spacy",
+                alternatives=[
+                    f"It can be difficult to {first.lemma_} {second.text}.",
+                    f"{second.text.capitalize()} who are {first.text.lower()} can be difficult."
+                ],
+            ))
+
+    for token in sent_doc:
+        if token.dep_ == "compound" and token.head.pos_ == "NOUN":
+            phrase = f"{token.text} {token.head.text}"
+            start = offset + token.idx
+            end = offset + token.head.idx + len(token.head.text)
+
+            if token.tag_ == "VBG":
+                issues.append(build_issue(
+                    term=phrase,
+                    start=start,
+                    end=end,
+                    category="Sentence Ambiguity",
+                    explanation="This phrase may describe an action or a type of thing.",
+                    suggestion="Rewrite it to show the intended meaning.",
+                    severity="Medium",
+                    replacement="",
+                    issue_type="ambiguous_structure",
+                    source="spacy",
+                    alternatives=[
+                        f"The sentence may mean '{token.text.lower()} the {token.head.text.lower()}'.",
+                        f"The sentence may mean '{token.text.lower()} {token.head.text.lower()}' as a type."
+                    ],
+                ))
+    return issues
+
+
+def detect_misplaced_modifier_spacy(sent_doc, offset: int) -> List[Dict[str, Any]]:
+    issues = []
+    text = sent_doc.text.strip()
+
+    if "," not in text:
+        return issues
+
+    first_chunk = text.split(",", 1)[0].strip()
+    first_words = first_chunk.split()
+    if not first_words:
+        return issues
+
+    first_word = first_words[0].lower()
+    if first_word not in LEADING_MODIFIER_WORDS:
+        return issues
+
+    subject_nouns = _sentence_subject_nouns(sent_doc)
+    if not subject_nouns:
+        return issues
+
+    # If leading modifier is followed by a pronoun subject, often unclear
+    for token in sent_doc:
+        if token.dep_ in {"nsubj", "nsubjpass"} and token.pos_ == "PRON":
+            start = offset + text.find(first_chunk)
+            end = start + len(first_chunk)
+            issues.append(build_issue(
+                term=first_chunk,
+                start=start,
+                end=end,
+                category="Misplaced Modifier",
+                explanation="The opening phrase may not clearly modify the correct subject.",
+                suggestion="Place the intended subject directly after the opening phrase.",
+                severity="Medium",
+                replacement="",
+                issue_type="misplaced_modifier",
+                source="spacy",
+            ))
+            break
+
+    return issues
+
+
+def detect_confusing_construction_spacy(sent_doc, offset: int) -> List[Dict[str, Any]]:
+    text = sent_doc.text
+    token_count = len([t for t in sent_doc if not t.is_space])
+    comma_count = text.count(",")
+    subordinate_count = sum(1 for t in sent_doc if t.text.lower() in SUBORDINATE_MARKERS)
+    conjunction_count = sum(1 for t in sent_doc if t.dep_ == "cc")
+
+    if token_count >= 30 or comma_count >= 3 or subordinate_count >= 2 or conjunction_count >= 3:
+        return [build_issue(
+            term=text,
+            start=offset,
+            end=offset + len(text),
+            category="Confusing Construction",
+            explanation="The sentence is long or structurally dense and may be hard to understand.",
+            suggestion="Split it into shorter sentences or clauses.",
+            severity="Medium",
+            replacement="",
+            issue_type="confusing_construction",
+            source="spacy",
+        )]
+    return []
+
+
+def detect_double_negative(sentence: str, offset: int = 0) -> List[Dict[str, Any]]:
+    negatives = [(w, s, e) for w, s, e in tokenize_with_offsets(sentence) if w.lower() in NEGATIVE_TERMS]
+    if len(negatives) < 2:
+        return []
+    first = negatives[0]
+    last = negatives[-1]
+    return [build_issue(
+        term=sentence[first[1]:last[2]],
+        start=offset + first[1],
+        end=offset + last[2],
+        category="Double Negative",
+        explanation="The sentence contains multiple negative terms and may be confusing.",
+        suggestion="Rewrite with one clear negative or a positive statement.",
+        severity="High",
+        replacement="",
+        issue_type="double_negative",
+        source="rules",
+    )]
+
+
+def detect_wrong_verb_forms_spacy(sent_doc, offset: int) -> List[Dict[str, Any]]:
+    issues = []
+
+    for token in sent_doc:
+        if token.dep_ not in {"ROOT", "conj", "auxpass", "ccomp", "xcomp"}:
+            continue
+
+        children = list(token.children)
+        subjects = [c for c in children if c.dep_ in {"nsubj", "nsubjpass"}]
+        if not subjects:
+            continue
+
+        subj = subjects[0]
+        subj_lower = subj.text.lower()
+
+        if subj_lower in {"he", "she", "it"} and token.tag_ == "VB":
+            start, end = _char_span_from_token(sent_doc, token, offset)
+            issues.append(build_issue(
+                term=token.text,
+                start=start,
+                end=end,
+                category="Wrong Verb Form",
+                explanation="The verb may not agree with the singular subject.",
+                suggestion="Use the correct singular verb form.",
+                severity="Medium",
+                replacement="",
+                issue_type="wrong_verb_form",
+                source="spacy",
+            ))
+
+        if subj_lower == "they" and token.tag_ == "VBZ":
+            start, end = _char_span_from_token(sent_doc, token, offset)
+            issues.append(build_issue(
+                term=token.text,
+                start=start,
+                end=end,
+                category="Wrong Verb Form",
+                explanation="The verb may not agree with the plural subject.",
+                suggestion="Use the correct plural verb form.",
+                severity="Medium",
+                replacement="",
+                issue_type="wrong_verb_form",
+                source="spacy",
             ))
 
     return issues
 
 
 def detect_languagetool_issues(text: str) -> Tuple[List[Dict[str, Any]], str]:
-    issues = []
     try:
         tool = get_language_tool()
         matches = tool.check(text)
@@ -639,10 +633,10 @@ def detect_languagetool_issues(text: str) -> Tuple[List[Dict[str, Any]], str]:
     except Exception:
         return [], text
 
+    issues = []
     for match in matches:
         start = int(getattr(match, "offset", 0))
-        length = int(getattr(match, "error_length", 0))
-        end = start + length
+        end = start + int(getattr(match, "error_length", 0))
         replacements = [str(r) for r in getattr(match, "replacements", [])[:5]]
         message = str(getattr(match, "message", "Language issue detected."))
         rule_text = (
@@ -692,14 +686,10 @@ def detect_spelling_fallback(text: str, existing_spans: List[Tuple[int, int]]) -
     issues = []
     for word, start, end in tokenize_with_offsets(text):
         lower = word.lower()
-
         if len(lower) <= 2 or lower.isdigit():
             continue
-
-        overlapped = any(start < e and end > s for s, e in existing_spans)
-        if overlapped:
+        if any(start < e and end > s for s, e in existing_spans):
             continue
-
         if lower not in SPELL:
             suggestions = list(SPELL.candidates(lower))[:3]
             if suggestions:
@@ -718,6 +708,18 @@ def detect_spelling_fallback(text: str, existing_spans: List[Tuple[int, int]]) -
     return issues
 
 
+def choose_sentence_alternative(local_issues: List[Dict[str, Any]], sentence_text: str) -> str:
+    # Prefer clear sentence-level rewrites when ambiguity detector has good alternatives
+    for issue in local_issues:
+        alternatives = issue.get("alternatives") or []
+        if alternatives:
+            first = alternatives[0]
+            # Keep only natural, direct alternatives
+            if "may mean" not in first.lower() and "describes" not in first.lower():
+                return first
+    return sentence_text
+
+
 def analyze_text(text: str) -> Dict[str, Any]:
     text = normalize_text(text)
 
@@ -732,39 +734,76 @@ def analyze_text(text: str) -> Dict[str, Any]:
 
     all_issues: List[Dict[str, Any]] = []
 
-    lt_issues, corrected_text = detect_languagetool_issues(text)
+    lt_issues, lt_corrected = detect_languagetool_issues(text)
     all_issues.extend(lt_issues)
 
+    nlp = get_nlp()
+    doc = nlp(text)
+
     sentence_results = []
-    for sentence, offset in split_into_sentences(text):
-        local_issues = []
-        local_issues.extend(detect_keyword_terms(sentence, offset))
-        local_issues.extend(detect_repeated_words(sentence, offset))
-        local_issues.extend(detect_unclear_pronouns(sentence, offset))
-        local_issues.extend(detect_double_negative(sentence, offset))
-        local_issues.extend(detect_ambiguous_structure(sentence, offset))
-        local_issues.extend(detect_wrong_verb_forms(sentence, offset))
-        local_issues.extend(detect_multiple_meanings(sentence, offset))
-        local_issues.extend(detect_misplaced_modifier(sentence, offset))
-        local_issues.extend(detect_pattern_ambiguities(sentence, offset))
+    for sent in doc.sents:
+        sent_text = sent.text.strip()
+        if not sent_text:
+            continue
+
+        # Find sentence offset in original text
+        offset = sent.start_char
+        local_issues: List[Dict[str, Any]] = []
+
+        local_issues.extend(detect_keyword_terms(sent_text, offset))
+        local_issues.extend(detect_repeated_words(sent_text, offset))
+        local_issues.extend(detect_double_negative(sent_text, offset))
+        local_issues.extend(detect_multiple_meanings_spacy(sent, offset))
+        local_issues.extend(detect_unclear_pronouns_spacy(sent, offset))
+        local_issues.extend(detect_attachment_ambiguity_spacy(sent, offset))
+        local_issues.extend(detect_gerund_or_compound_ambiguity_spacy(sent, offset))
+        local_issues.extend(detect_misplaced_modifier_spacy(sent, offset))
+        local_issues.extend(detect_confusing_construction_spacy(sent, offset))
+        local_issues.extend(detect_wrong_verb_forms_spacy(sent, offset))
+
         all_issues.extend(local_issues)
+        sentence_results.append({
+            "sentence": sent_text,
+            "offset": offset,
+            "issues": local_issues,
+        })
 
     all_issues = dedupe_issues(all_issues)
     spans = [(x["start"], x["end"]) for x in all_issues]
     all_issues.extend(detect_spelling_fallback(text, spans))
     all_issues = dedupe_issues(all_issues)
 
-    for sentence, offset in split_into_sentences(text):
-        sentence_issues = []
+    # Build corrected sentence text:
+    # start from LT-corrected text, but if a sentence has a strong ambiguity alternative, use it.
+    lt_sentences = split_into_sentences(lt_corrected) if lt_corrected else split_into_sentences(text)
+    corrected_parts = []
+
+    for idx, s in enumerate(sentence_results):
+        local_issues = [
+            issue for issue in all_issues
+            if issue["start"] >= s["offset"] and issue["end"] <= s["offset"] + len(s["sentence"])
+        ]
+        if idx < len(lt_sentences):
+            base_sentence = lt_sentences[idx][0]
+        else:
+            base_sentence = s["sentence"]
+        corrected_parts.append(choose_sentence_alternative(local_issues, base_sentence))
+
+    corrected_text = " ".join(part.strip() for part in corrected_parts if part.strip())
+
+    # Normalize local issue offsets for per-sentence display
+    normalized_sentence_results = []
+    for s in sentence_results:
+        local = []
         for issue in all_issues:
-            if issue["start"] >= offset and issue["end"] <= offset + len(sentence):
+            if issue["start"] >= s["offset"] and issue["end"] <= s["offset"] + len(s["sentence"]):
                 copied = dict(issue)
-                copied["start"] -= offset
-                copied["end"] -= offset
-                sentence_issues.append(copied)
-        sentence_results.append({
-            "sentence": sentence,
-            "issues": sentence_issues,
+                copied["start"] -= s["offset"]
+                copied["end"] -= s["offset"]
+                local.append(copied)
+        normalized_sentence_results.append({
+            "sentence": s["sentence"],
+            "issues": local,
         })
 
     stats = {
@@ -781,7 +820,7 @@ def analyze_text(text: str) -> Dict[str, Any]:
     }
 
     return {
-        "sentences": sentence_results,
+        "sentences": normalized_sentence_results,
         "all_issues": all_issues,
         "corrected_text": corrected_text,
         "summary": f"Detected {len(all_issues)} issue(s).",

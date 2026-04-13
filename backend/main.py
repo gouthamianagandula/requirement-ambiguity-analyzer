@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 from docx import Document
-from pypdf import PdfReader
+from PyPDF2 import PdfReader
 
 from backend.detector import analyze_text
 from backend.scorer import calculate_score, get_score_label
