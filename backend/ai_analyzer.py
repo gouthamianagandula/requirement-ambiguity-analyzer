@@ -95,29 +95,40 @@ Text:
 {text}
 """
 
-    response = client.responses.create(
-        model=model,
-        instructions=SYSTEM_PROMPT,
-        input=user_prompt,
-        text={
-            "format": {
-                "type": "json_schema",
-                "json_schema": ANALYSIS_SCHEMA
+    try:
+        response = client.responses.create(
+            model=model,
+            instructions=SYSTEM_PROMPT,
+            input=user_prompt,
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "json_schema": ANALYSIS_SCHEMA
+                }
             }
+        )
+
+        output_text = getattr(response, "output_text", "") or ""
+        parsed = _safe_json_load(output_text)
+
+        issues: List[Dict[str, Any]] = [
+            _normalize_issue(issue) for issue in parsed.get("issues", [])
+        ]
+
+        corrected_text = str(parsed.get("corrected_text", text)).strip() or text
+        rewrite = str(parsed.get("rewrite", corrected_text)).strip() or corrected_text
+
+        return {
+            "issues": issues,
+            "corrected_text": corrected_text,
+            "rewrite": rewrite,
+            "error": ""
         }
-    )
 
-    parsed = _safe_json_load(response.output_text)
-
-    issues: List[Dict[str, Any]] = [
-        _normalize_issue(issue) for issue in parsed.get("issues", [])
-    ]
-
-    corrected_text = str(parsed.get("corrected_text", text)).strip() or text
-    rewrite = str(parsed.get("rewrite", corrected_text)).strip() or corrected_text
-
-    return {
-        "issues": issues,
-        "corrected_text": corrected_text,
-        "rewrite": rewrite,
-    }
+    except Exception as e:
+        return {
+            "issues": [],
+            "corrected_text": text,
+            "rewrite": text,
+            "error": str(e)
+        }

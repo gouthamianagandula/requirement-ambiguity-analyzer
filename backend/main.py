@@ -147,24 +147,29 @@ def build_highlight_html(text, issues):
     if not issues:
         return html.escape(text)
 
-    # find spans dynamically from returned terms
     spans = []
     lower_text = text.lower()
+    search_start = 0
 
     for issue in issues:
         term = (issue.get("term") or "").strip()
         if not term:
             continue
 
-        start = lower_text.find(term.lower())
+        start = lower_text.find(term.lower(), search_start)
+        if start == -1:
+            start = lower_text.find(term.lower())
+
         if start == -1:
             continue
+
         end = start + len(term)
         spans.append({
             "start": start,
             "end": end,
             "issue": issue
         })
+        search_start = end
 
     spans = sorted(spans, key=lambda x: x["start"])
 
@@ -203,6 +208,15 @@ def build_highlight_html(text, issues):
 
 def run_analysis(text: str, user: dict):
     analysis = analyze_with_ai(text)
+
+    if analysis.get("error"):
+        return JSONResponse(
+            {
+                "error": f"AI analysis failed: {analysis['error']}"
+            },
+            status_code=500
+        )
+
     all_issues = analysis["issues"]
 
     score = calculate_score(all_issues)
@@ -449,7 +463,6 @@ async def analyze_file(request: Request, file: UploadFile = File(...)):
         return JSONResponse({"error": "Uploaded file is empty."}, status_code=400)
 
     result = run_analysis(extracted_text, user)
-    result["source_file"] = file.filename
     return result
 
 
