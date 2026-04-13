@@ -16,9 +16,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from docx import Document
 from PyPDF2 import PdfReader
 
-from backend.detector import analyze_text
+from backend.ai_analyzer import analyze_with_ai
 from backend.scorer import calculate_score, get_score_label
-from backend.suggester import generate_rewrite
 from backend.database import (
     init_db,
     save_history,
@@ -125,7 +124,7 @@ def is_logged_in(request: Request):
 def get_highlight_class(issue):
     issue_type = issue.get("issue_type", "")
 
-    if issue_type in {"grammar", "wrong_verb_form", "repeated_word", "misplaced_modifier"}:
+    if issue_type in {"grammar", "wrong_verb_form", "repeated_word", "misplaced_modifier", "punctuation"}:
         return "highlight-grammar"
 
     if issue_type == "spelling":
@@ -137,7 +136,7 @@ def get_highlight_class(issue):
         "ambiguous_structure",
         "confusing_construction",
         "double_negative",
-        "multiple_meaning"
+        "multiple_meaning",
     }:
         return "highlight-ambiguity"
 
@@ -148,13 +147,34 @@ def build_highlight_html(text, issues):
     if not issues:
         return html.escape(text)
 
-    issues_sorted = sorted(issues, key=lambda x: x["start"])
+    # find spans dynamically from returned terms
+    spans = []
+    lower_text = text.lower()
+
+    for issue in issues:
+        term = (issue.get("term") or "").strip()
+        if not term:
+            continue
+
+        start = lower_text.find(term.lower())
+        if start == -1:
+            continue
+        end = start + len(term)
+        spans.append({
+            "start": start,
+            "end": end,
+            "issue": issue
+        })
+
+    spans = sorted(spans, key=lambda x: x["start"])
+
     result = []
     last_index = 0
 
-    for issue in issues_sorted:
-        start = issue["start"]
-        end = issue["end"]
+    for item in spans:
+        start = item["start"]
+        end = item["end"]
+        issue = item["issue"]
 
         if start < last_index:
             continue
@@ -182,15 +202,15 @@ def build_highlight_html(text, issues):
 
 
 def run_analysis(text: str, user: dict):
-    analysis = analyze_text(text)
-    all_issues = analysis["all_issues"]
+    analysis = analyze_with_ai(text)
+    all_issues = analysis["issues"]
 
     score = calculate_score(all_issues)
     score_label = get_score_label(score)
     predicted_label = score_label.lower()
 
     corrected_text = analysis.get("corrected_text", text)
-    rewritten = generate_rewrite(text, all_issues, corrected_text=corrected_text)
+    rewritten = analysis.get("rewrite", corrected_text)
     highlighted_html = build_highlight_html(text, all_issues)
 
     stats = read_stats()
@@ -204,7 +224,6 @@ def run_analysis(text: str, user: dict):
         stats["total_score_sum"] / stats["total_requirements_analyzed"], 2
     )
     stats["last_predicted_label"] = predicted_label
-
     write_stats(stats)
 
     save_history(
@@ -328,11 +347,6 @@ async def auth_google(request: Request):
     return RedirectResponse(url="/analyzer")
 
 
-@app.get("/login/microsoft")
-async def login_microsoft():
-    return RedirectResponse(url="/login")
-
-
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
@@ -345,7 +359,6 @@ async def analyzer_page(request: Request):
         return RedirectResponse(url="/login")
 
     user = request.session.get("user")
-
     return templates.TemplateResponse(
         request=request,
         name="analyzer.html",
@@ -359,7 +372,6 @@ async def history_page(request: Request):
         return RedirectResponse(url="/login")
 
     user = request.session.get("user")
-
     return templates.TemplateResponse(
         request=request,
         name="history.html",
@@ -373,7 +385,6 @@ async def dashboard_page(request: Request):
         return RedirectResponse(url="/login")
 
     user = request.session.get("user")
-
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -387,7 +398,6 @@ async def admin_page(request: Request):
         return RedirectResponse(url="/login")
 
     user = request.session.get("user")
-
     return templates.TemplateResponse(
         request=request,
         name="admin.html",
@@ -469,43 +479,3 @@ async def history(request: Request):
     user = request.session.get("user")
     rows = get_user_history(user.get("email", ""))
     return {"history": rows}
-
-
-@app.get("/blog", response_class=HTMLResponse)
-async def blog_page(request: Request):
-    return templates.TemplateResponse(request=request, name="blog.html", context={})
-
-
-@app.get("/pricing", response_class=HTMLResponse)
-async def pricing_page(request: Request):
-    return templates.TemplateResponse(request=request, name="pricing.html", context={})
-
-
-@app.get("/services", response_class=HTMLResponse)
-async def services_page(request: Request):
-    return templates.TemplateResponse(request=request, name="services.html", context={})
-
-
-@app.get("/results", response_class=HTMLResponse)
-async def results_page(request: Request):
-    return templates.TemplateResponse(request=request, name="results.html", context={})
-
-
-@app.get("/training", response_class=HTMLResponse)
-async def training_page(request: Request):
-    return templates.TemplateResponse(request=request, name="training.html", context={})
-
-
-@app.get("/tools", response_class=HTMLResponse)
-async def tools_page(request: Request):
-    return templates.TemplateResponse(request=request, name="tools.html", context={})
-
-
-@app.get("/consulting", response_class=HTMLResponse)
-async def consulting_page(request: Request):
-    return templates.TemplateResponse(request=request, name="consulting.html", context={})
-
-
-@app.get("/contact", response_class=HTMLResponse)
-async def contact_page(request: Request):
-    return templates.TemplateResponse(request=request, name="contact.html", context={})
