@@ -125,7 +125,7 @@ function renderIssueCards(issues) {
 
   let html = "";
 
-  issues.forEach((issue, index) => {
+  issues.forEach((issue) => {
     const category = escapeHtml(issue.category || "Issue");
     const explanation = escapeHtml(issue.explanation || "");
     const suggestion = escapeHtml(issue.suggestion || "");
@@ -187,6 +187,18 @@ function renderAnalyzerResult(data) {
   renderIssueCards(data.issues || []);
 }
 
+function renderAnalyzerError(message) {
+  const highlightedOutput = document.getElementById("highlightedOutput");
+  const correctedOutput = document.getElementById("correctedOutput");
+  const rewriteOutput = document.getElementById("rewriteOutput");
+  const issuesOutput = document.getElementById("issuesOutput");
+
+  if (highlightedOutput) highlightedOutput.innerText = message || "Analysis failed.";
+  if (correctedOutput) correctedOutput.innerText = "";
+  if (rewriteOutput) rewriteOutput.innerText = "";
+  if (issuesOutput) issuesOutput.innerHTML = "";
+}
+
 async function analyzeRequirement() {
   const textBox = document.getElementById("requirementText");
   const highlightedOutput = document.getElementById("highlightedOutput");
@@ -199,10 +211,7 @@ async function analyzeRequirement() {
   const text = textBox.value.trim();
 
   if (!text) {
-    if (highlightedOutput) highlightedOutput.innerText = "Enter requirement text first.";
-    if (correctedOutput) correctedOutput.innerText = "";
-    if (rewriteOutput) rewriteOutput.innerText = "";
-    if (issuesOutput) issuesOutput.innerHTML = "";
+    renderAnalyzerError("Enter requirement text first.");
     return;
   }
 
@@ -220,23 +229,23 @@ async function analyzeRequirement() {
       body: JSON.stringify({ text })
     });
 
-    const data = await response.json();
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      renderAnalyzerError("Backend returned invalid response.");
+      return;
+    }
 
-    if (!response.ok) {
-      if (highlightedOutput) highlightedOutput.innerText = data.error || "Analysis failed.";
-      if (correctedOutput) correctedOutput.innerText = "";
-      if (rewriteOutput) rewriteOutput.innerText = "";
-      if (issuesOutput) issuesOutput.innerHTML = "";
+    if (!response.ok || data.error) {
+      renderAnalyzerError(data.error || `Analysis failed with status ${response.status}.`);
       return;
     }
 
     renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    if (highlightedOutput) highlightedOutput.innerText = "Error connecting to backend.";
-    if (correctedOutput) correctedOutput.innerText = "";
-    if (rewriteOutput) rewriteOutput.innerText = "";
-    if (issuesOutput) issuesOutput.innerHTML = "";
+    renderAnalyzerError(`Network error: ${error.message}`);
   }
 }
 
@@ -248,10 +257,7 @@ async function analyzeUploadedFile() {
   const issuesOutput = document.getElementById("issuesOutput");
 
   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-    if (highlightedOutput) highlightedOutput.innerText = "Select a .txt, .docx, or .pdf file first.";
-    if (correctedOutput) correctedOutput.innerText = "";
-    if (rewriteOutput) rewriteOutput.innerText = "";
-    if (issuesOutput) issuesOutput.innerHTML = "";
+    renderAnalyzerError("Select a .txt, .docx, or .pdf file first.");
     return;
   }
 
@@ -269,23 +275,23 @@ async function analyzeUploadedFile() {
       body: formData
     });
 
-    const data = await response.json();
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      renderAnalyzerError("Backend returned invalid response.");
+      return;
+    }
 
-    if (!response.ok) {
-      if (highlightedOutput) highlightedOutput.innerText = data.error || "File analysis failed.";
-      if (correctedOutput) correctedOutput.innerText = "";
-      if (rewriteOutput) rewriteOutput.innerText = "";
-      if (issuesOutput) issuesOutput.innerHTML = "";
+    if (!response.ok || data.error) {
+      renderAnalyzerError(data.error || `File analysis failed with status ${response.status}.`);
       return;
     }
 
     renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    if (highlightedOutput) highlightedOutput.innerText = "Error uploading file.";
-    if (correctedOutput) correctedOutput.innerText = "";
-    if (rewriteOutput) rewriteOutput.innerText = "";
-    if (issuesOutput) issuesOutput.innerHTML = "";
+    renderAnalyzerError(`Network error: ${error.message}`);
   }
 }
 
