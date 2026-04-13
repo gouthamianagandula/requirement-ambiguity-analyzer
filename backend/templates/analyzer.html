@@ -6,123 +6,121 @@
     <title>Requirement Ambiguity Analyzer</title>
     <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body class="light-theme">
-    <div class="qb-shell">
-        <aside class="qb-sidebar">
-            <div class="qb-brand">
-                <div class="qb-brand-icon">RAA</div>
-                <div class="qb-brand-text">
-                    <h2>Requirement Ambiguity Analyzer</h2>
-                    <p>Requirement clarity assistant</p>
+<body class="dark-theme">
+    <div class="analyzer-layout">
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="brand-card">
+                    <div class="brand-logo">RAA</div>
+                    <div>
+                        <h2>Requirement Ambiguity Analyzer</h2>
+                        <p>Requirement clarity assistant</p>
+                    </div>
+                </div>
+
+                <div class="profile-card">
+                    <div class="profile-avatar">U</div>
+                    <div class="profile-info">
+                        <h3 id="profileName">User</h3>
+                        <p id="profileEmail">user@email.com</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="qb-profile-card">
-                <div class="qb-avatar">U</div>
-                <div class="qb-profile-info">
-                    <h3 id="profileName">User</h3>
-                    <p id="profileEmail">user@email.com</p>
-                </div>
-            </div>
-
-            <div class="qb-side-section">
+            <div class="sidebar-section">
                 <h4>Dashboard</h4>
-                <div class="qb-stat-list">
-                    <div class="qb-stat-card">
+
+                <div class="dashboard-grid">
+                    <div class="dashboard-item">
                         <span>Total Requirements</span>
                         <strong id="totalRequirements">0</strong>
                     </div>
 
-                    <div class="qb-stat-card">
+                    <div class="dashboard-item">
                         <span>Ambiguous Count</span>
                         <strong id="ambiguousCount">0</strong>
                     </div>
 
-                    <div class="qb-stat-card">
+                    <div class="dashboard-item">
                         <span>Average Score</span>
                         <strong id="averageScore">0</strong>
                     </div>
 
-                    <div class="qb-stat-card">
+                    <div class="dashboard-item">
                         <span>Last Predicted Label</span>
                         <strong id="lastLabel">None</strong>
                     </div>
                 </div>
 
-                <div id="dashboardSummary" class="qb-summary-card"></div>
+                <div id="dashboardSummary" class="sidebar-note"></div>
             </div>
 
-            <div class="qb-side-section">
+            <div class="sidebar-section">
                 <h4>Navigation</h4>
-                <div class="qb-nav-list">
-                    <a href="/dashboard" class="qb-nav-btn">Dashboard</a>
-                    <a href="/history-page" class="qb-nav-btn">History</a>
-                    <a href="/admin" class="qb-nav-btn">Admin</a>
-                    <button type="button" class="qb-nav-btn" onclick="toggleTheme()">Toggle Theme</button>
-                    <button type="button" class="qb-primary-btn full-btn analyze-btn" onclick="loadDashboard()">Refresh Dashboard</button>
-                    <a href="/logout" class="qb-secondary-btn full-btn">Logout</a>
+
+                <div class="sidebar-actions">
+                    <a href="/dashboard" class="nav-btn">Dashboard</a>
+                    <a href="/history-page" class="nav-btn">History</a>
+                    <a href="/admin" class="nav-btn">Admin</a>
+                    <button class="nav-btn" type="button" onclick="toggleTheme()">Toggle Theme</button>
+                    <button class="primary-btn full-btn analyze-btn" type="button" onclick="loadDashboard()">Refresh Dashboard</button>
+                    <a href="/logout" class="secondary-btn full-btn logout-btn">Logout</a>
                 </div>
             </div>
         </aside>
 
-        <main class="qb-main">
-            <header class="qb-topbar">
-                <div class="qb-topbar-left">
-                    <div class="qb-chip">RAA Workspace</div>
-                    <h1>Hi, welcome to RAA</h1>
-                    <p>Write, paste, upload, and analyze requirement sentences with AI-style clarity support.</p>
-                </div>
-            </header>
+        <main class="main-content">
+            <section class="hero-panel">
+                <h1>Requirement Analyzer</h1>
+                <p>Enter any sentence or paragraph and analyze it using AI-style correction and rewrite support.</p>
+            </section>
 
-            <section class="qb-editor-card">
-                <div class="qb-editor-head">
+            <section class="editor-panel">
+                <div class="editor-panel-head">
                     <div>
-                        <h2>Requirement Analyzer</h2>
-                        <p class="qb-muted-text">Start typing or upload a file to analyze ambiguity, grammar, and clarity.</p>
+                        <label class="field-label" for="requirementText">Requirement Text</label>
+                        <p class="field-subtext">Type naturally. Realtime analysis starts after a little more text.</p>
                     </div>
+
                     <div id="analyzerStatus" class="status-text">
                         <span class="status-muted">Realtime analysis starts after more text is entered.</span>
                     </div>
                 </div>
 
-                <div class="qb-textarea-wrap">
-                    <textarea
-                        id="requirementText"
-                        placeholder="Write, paste, or upload your requirement text here..."
-                    ></textarea>
-                </div>
+                <textarea
+                    id="requirementText"
+                    placeholder="Example: the system should quickly process the file and it should notify user soon"
+                ></textarea>
 
-                <div class="qb-upload-row">
-                    <label class="qb-upload-label" for="fileInput">Upload file</label>
+                <div class="upload-row">
+                    <label class="field-label" for="fileInput">Upload File</label>
                     <input id="fileInput" type="file" accept=".txt,.docx,.pdf" title="Upload a text, Word, or PDF file" />
                 </div>
 
-                <div class="qb-action-row">
-                    <button class="qb-primary-btn analyze-btn" type="button" onclick="analyzeRequirement()">Analyze Requirement</button>
-                    <button class="qb-secondary-btn analyze-btn" type="button" onclick="analyzeUploadedFile()">Analyze File</button>
+                <div class="action-row">
+                    <button class="primary-btn analyze-btn" type="button" onclick="analyzeRequirement()">Analyze Requirement</button>
+                    <button class="secondary-btn analyze-btn" type="button" onclick="analyzeUploadedFile()">Analyze File</button>
                 </div>
             </section>
 
-            <section class="qb-results-grid">
-                <div class="qb-result-card">
-                    <h3>Highlighted Text</h3>
-                    <div id="highlightedOutput" class="qb-result-box result-html-box">Your highlighted result will appear here.</div>
-                </div>
-
-                <div class="qb-result-card">
-                    <h3>Corrected Sentence</h3>
-                    <div id="correctedOutput" class="qb-result-box">Your corrected sentence will appear here.</div>
-                </div>
-
-                <div class="qb-result-card">
-                    <h3>Professional Rewrite</h3>
-                    <div id="rewriteOutput" class="qb-result-box">Your professional rewrite will appear here.</div>
-                </div>
+            <section class="result-panel">
+                <h3>Highlighted Text</h3>
+                <div id="highlightedOutput" class="result-box result-html-box">Your highlighted result will appear here.</div>
             </section>
 
-            <section class="qb-details-card">
+            <section class="result-panel">
+                <h3>Corrected Sentence</h3>
+                <div id="correctedOutput" class="result-box">Your corrected sentence will appear here.</div>
+            </section>
+
+            <section class="result-panel">
+                <h3>Professional Rewrite</h3>
+                <div id="rewriteOutput" class="result-box">Your professional rewrite will appear here.</div>
+            </section>
+
+            <section class="result-panel">
                 <h3>AI Analysis Details</h3>
-                <div id="issuesOutput" class="qb-result-box">AI issues and suggestions will appear here.</div>
+                <div id="issuesOutput" class="result-box">AI issues and suggestions will appear here.</div>
             </section>
         </main>
     </div>
