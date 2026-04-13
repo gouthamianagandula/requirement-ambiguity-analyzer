@@ -104,10 +104,71 @@ async function registerWithEmail() {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function buildIssuesHtml(issues) {
+  if (!issues || issues.length === 0) {
+    return "<p>No AI issues detected.</p>";
+  }
+
+  let html = "";
+
+  issues.forEach((issue, index) => {
+    const category = escapeHtml(issue.category || "Issue");
+    const explanation = escapeHtml(issue.explanation || "No explanation available.");
+    const suggestion = escapeHtml(issue.suggestion || "No suggestion available.");
+    const replacement = escapeHtml(issue.replacement || "");
+    const severity = escapeHtml(issue.severity || "");
+    const issueType = escapeHtml(issue.issue_type || "");
+    const term = escapeHtml(issue.term || "");
+
+    html += `
+      <div class="issue-card">
+        <div class="issue-card-header">
+          <h4>${category}</h4>
+          ${severity ? `<span class="issue-badge">${severity}</span>` : ""}
+        </div>
+        ${term ? `<p><strong>Problem Text:</strong> ${term}</p>` : ""}
+        ${issueType ? `<p><strong>Issue Type:</strong> ${issueType}</p>` : ""}
+        <p><strong>Explanation:</strong> ${explanation}</p>
+        <p><strong>Suggestion:</strong> ${suggestion}</p>
+        ${replacement ? `<p><strong>Suggested Fix:</strong> ${replacement}</p>` : ""}
+    `;
+
+    if (Array.isArray(issue.alternatives) && issue.alternatives.length > 0) {
+      html += `<div class="issue-list-block"><p><strong>Better Alternatives:</strong></p><ul>`;
+      issue.alternatives.forEach((alt) => {
+        html += `<li>${escapeHtml(alt)}</li>`;
+      });
+      html += `</ul></div>`;
+    }
+
+    if (Array.isArray(issue.meanings) && issue.meanings.length > 0) {
+      html += `<div class="issue-list-block"><p><strong>Possible Meanings:</strong></p><ul>`;
+      issue.meanings.forEach((meaning) => {
+        html += `<li>${escapeHtml(meaning)}</li>`;
+      });
+      html += `</ul></div>`;
+    }
+
+    html += `</div>`;
+  });
+
+  return html;
+}
+
 function renderAnalyzerResult(data) {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
+  const issuesOutput = document.getElementById("issuesOutput");
 
   if (highlightedOutput) {
     highlightedOutput.innerHTML = data.highlighted_html || "No highlighted issues.";
@@ -120,6 +181,10 @@ function renderAnalyzerResult(data) {
   if (rewriteOutput) {
     rewriteOutput.innerText = data.rewrite || data.corrected_text || data.input || "No rewrite available.";
   }
+
+  if (issuesOutput) {
+    issuesOutput.innerHTML = buildIssuesHtml(data.issues || []);
+  }
 }
 
 async function analyzeRequirement() {
@@ -127,6 +192,7 @@ async function analyzeRequirement() {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
+  const issuesOutput = document.getElementById("issuesOutput");
 
   if (!textBox) return;
 
@@ -136,12 +202,14 @@ async function analyzeRequirement() {
     if (highlightedOutput) highlightedOutput.innerText = "Enter requirement text first.";
     if (correctedOutput) correctedOutput.innerText = "";
     if (rewriteOutput) rewriteOutput.innerText = "";
+    if (issuesOutput) issuesOutput.innerHTML = "";
     return;
   }
 
   if (highlightedOutput) highlightedOutput.innerText = "Analyzing...";
   if (correctedOutput) correctedOutput.innerText = "Analyzing...";
   if (rewriteOutput) rewriteOutput.innerText = "Analyzing...";
+  if (issuesOutput) issuesOutput.innerHTML = "Analyzing...";
 
   try {
     const response = await fetch("/analyze", {
@@ -158,6 +226,7 @@ async function analyzeRequirement() {
       if (highlightedOutput) highlightedOutput.innerText = data.error || "Analysis failed.";
       if (correctedOutput) correctedOutput.innerText = "";
       if (rewriteOutput) rewriteOutput.innerText = "";
+      if (issuesOutput) issuesOutput.innerHTML = "";
       return;
     }
 
@@ -167,6 +236,7 @@ async function analyzeRequirement() {
     if (highlightedOutput) highlightedOutput.innerText = "Error connecting to backend.";
     if (correctedOutput) correctedOutput.innerText = "";
     if (rewriteOutput) rewriteOutput.innerText = "";
+    if (issuesOutput) issuesOutput.innerHTML = "";
   }
 }
 
@@ -175,11 +245,13 @@ async function analyzeUploadedFile() {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
+  const issuesOutput = document.getElementById("issuesOutput");
 
   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
     if (highlightedOutput) highlightedOutput.innerText = "Select a .txt, .docx, or .pdf file first.";
     if (correctedOutput) correctedOutput.innerText = "";
     if (rewriteOutput) rewriteOutput.innerText = "";
+    if (issuesOutput) issuesOutput.innerHTML = "";
     return;
   }
 
@@ -189,6 +261,7 @@ async function analyzeUploadedFile() {
   if (highlightedOutput) highlightedOutput.innerText = "Analyzing uploaded file...";
   if (correctedOutput) correctedOutput.innerText = "Analyzing...";
   if (rewriteOutput) rewriteOutput.innerText = "Analyzing...";
+  if (issuesOutput) issuesOutput.innerHTML = "Analyzing...";
 
   try {
     const response = await fetch("/analyze-file", {
@@ -202,6 +275,7 @@ async function analyzeUploadedFile() {
       if (highlightedOutput) highlightedOutput.innerText = data.error || "File analysis failed.";
       if (correctedOutput) correctedOutput.innerText = "";
       if (rewriteOutput) rewriteOutput.innerText = "";
+      if (issuesOutput) issuesOutput.innerHTML = "";
       return;
     }
 
@@ -211,6 +285,7 @@ async function analyzeUploadedFile() {
     if (highlightedOutput) highlightedOutput.innerText = "Error uploading file.";
     if (correctedOutput) correctedOutput.innerText = "";
     if (rewriteOutput) rewriteOutput.innerText = "";
+    if (issuesOutput) issuesOutput.innerHTML = "";
   }
 }
 
@@ -334,11 +409,11 @@ async function loadHistory() {
       html += `
         <div class="sentence-card">
           <h4>History ${index + 1}</h4>
-          <p><strong>Input:</strong> ${item.input_text}</p>
-          <p><strong>Predicted Label:</strong> ${item.predicted_label}</p>
-          <p><strong>Score:</strong> ${item.score}</p>
-          <p><strong>Rewrite:</strong> ${item.rewrite}</p>
-          <p><strong>Date:</strong> ${item.created_at}</p>
+          <p><strong>Input:</strong> ${escapeHtml(item.input_text)}</p>
+          <p><strong>Predicted Label:</strong> ${escapeHtml(item.predicted_label)}</p>
+          <p><strong>Score:</strong> ${escapeHtml(item.score)}</p>
+          <p><strong>Rewrite:</strong> ${escapeHtml(item.rewrite)}</p>
+          <p><strong>Date:</strong> ${escapeHtml(item.created_at)}</p>
         </div>
       `;
     });
@@ -373,9 +448,9 @@ async function loadAdmin() {
         usersHtml += `
           <div class="sentence-card">
             <h4>User ${index + 1}</h4>
-            <p><strong>Name:</strong> ${user.name}</p>
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>Created:</strong> ${user.created_at}</p>
+            <p><strong>Name:</strong> ${escapeHtml(user.name)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
+            <p><strong>Created:</strong> ${escapeHtml(user.created_at)}</p>
           </div>
         `;
       });
@@ -390,12 +465,12 @@ async function loadAdmin() {
         historyHtml += `
           <div class="sentence-card">
             <h4>Record ${index + 1}</h4>
-            <p><strong>User:</strong> ${item.user_name}</p>
-            <p><strong>Email:</strong> ${item.user_email}</p>
-            <p><strong>Input:</strong> ${item.input_text}</p>
-            <p><strong>Label:</strong> ${item.predicted_label}</p>
-            <p><strong>Score:</strong> ${item.score}</p>
-            <p><strong>Date:</strong> ${item.created_at}</p>
+            <p><strong>User:</strong> ${escapeHtml(item.user_name)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(item.user_email)}</p>
+            <p><strong>Input:</strong> ${escapeHtml(item.input_text)}</p>
+            <p><strong>Label:</strong> ${escapeHtml(item.predicted_label)}</p>
+            <p><strong>Score:</strong> ${escapeHtml(item.score)}</p>
+            <p><strong>Date:</strong> ${escapeHtml(item.created_at)}</p>
           </div>
         `;
       });
