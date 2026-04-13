@@ -1,120 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Requirement Ambiguity Analyzer</title>
-    <link rel="stylesheet" href="/static/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAA Analyzer</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="dark-theme">
-    <div class="analyzer-layout">
-        <aside class="sidebar">
-            <div class="sidebar-top">
-                <div class="brand-card">
-                    <div class="brand-logo">RAA</div>
-                    <div>
-                        <h2>Requirement Ambiguity Analyzer</h2>
-                        <p>Requirement clarity assistant</p>
-                    </div>
-                </div>
 
-                <div class="profile-card">
-                    <div class="profile-avatar">U</div>
-                    <div class="profile-info">
-                        <h3 id="profileName">User</h3>
-                        <p id="profileEmail">user@email.com</p>
-                    </div>
-                </div>
-            </div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h2 class="logo">RAA</h2>
 
-            <div class="sidebar-section">
-                <h4>Dashboard</h4>
+    <nav>
+      <a href="/analyzer" class="active">Analyzer</a>
+      <a href="/history-page">History</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/admin">Admin</a>
+    </nav>
 
-                <div class="dashboard-grid">
-                    <div class="dashboard-item">
-                        <span>Total Requirements</span>
-                        <strong id="totalRequirements">0</strong>
-                    </div>
-
-                    <div class="dashboard-item">
-                        <span>Ambiguous Count</span>
-                        <strong id="ambiguousCount">0</strong>
-                    </div>
-
-                    <div class="dashboard-item">
-                        <span>Average Score</span>
-                        <strong id="averageScore">0</strong>
-                    </div>
-
-                    <div class="dashboard-item">
-                        <span>Last Predicted Label</span>
-                        <strong id="lastLabel">None</strong>
-                    </div>
-                </div>
-
-                <div id="dashboardSummary" class="sidebar-note"></div>
-            </div>
-
-            <div class="sidebar-section">
-                <h4>Navigation</h4>
-
-                <div class="sidebar-actions">
-                    <a href="/dashboard" class="nav-btn">Dashboard</a>
-                    <a href="/history-page" class="nav-btn">History</a>
-                    <a href="/admin" class="nav-btn">Admin</a>
-                    <button class="nav-btn" type="button" onclick="toggleTheme()">Toggle Theme</button>
-                    <button class="primary-btn full-btn" type="button" onclick="loadDashboard()">Refresh Dashboard</button>
-                    <a href="/logout" class="secondary-btn full-btn logout-btn">Logout</a>
-                </div>
-            </div>
-        </aside>
-
-        <main class="main-content">
-            <section class="hero-panel">
-                <h1>Requirement Analyzer</h1>
-                <p>Enter any sentence or paragraph and analyze it using AI-style correction and rewrite support.</p>
-            </section>
-
-            <section class="editor-panel">
-                <label class="field-label" for="requirementText">Requirement Text</label>
-                <textarea
-                    id="requirementText"
-                    placeholder="Example: the system should quickly process the file and it should notify user soon"
-                ></textarea>
-
-                <div class="upload-row">
-                    <label class="field-label" for="fileInput">Upload File</label>
-                    <input id="fileInput" type="file" accept=".txt,.docx,.pdf" title="Upload a text, Word, or PDF file" />
-                </div>
-
-                <div class="action-row">
-                    <button class="primary-btn" type="button" onclick="analyzeRequirement()">Analyze Requirement</button>
-                    <button class="secondary-btn" type="button" onclick="analyzeUploadedFile()">Analyze File</button>
-                </div>
-            </section>
-
-            <section class="result-panel">
-                <h3>Highlighted Text</h3>
-                <div id="highlightedOutput" class="result-box result-html-box">Your highlighted result will appear here.</div>
-            </section>
-
-            <section class="result-panel">
-                <h3>Corrected Sentence</h3>
-                <div id="correctedOutput" class="result-box">Your corrected sentence will appear here.</div>
-            </section>
-
-            <section class="result-panel">
-                <h3>Professional Rewrite</h3>
-                <div id="rewriteOutput" class="result-box">Your professional rewrite will appear here.</div>
-            </section>
-
-            <section class="result-panel">
-                <h3>AI Analysis Details</h3>
-                <div id="issuesOutput" class="result-box">AI issues and suggestions will appear here.</div>
-            </section>
-        </main>
+    <div class="sidebar-bottom">
+      <button onclick="toggleTheme()">Toggle Theme</button>
+      <a href="/logout">Logout</a>
     </div>
+  </aside>
 
-    <script src="/static/app.js"></script>
+  <!-- Main -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="top-bar">
+      <div>
+        <h1>Requirement Ambiguity Analyzer</h1>
+        <p>AI-powered clarity and rewriting</p>
+      </div>
+
+      <div class="profile">
+        <div class="profile-avatar">{{ user.name[0] if user else 'U' }}</div>
+        <div>
+          <p id="profileName">{{ user.name }}</p>
+          <p id="profileEmail">{{ user.email }}</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Analyzer Card -->
+    <section class="analyzer-card">
+
+      <!-- Input -->
+      <div class="input-section">
+        <textarea id="requirementText" placeholder="Type your requirement or sentence here..."></textarea>
+
+        <div class="action-row">
+          <button class="analyze-btn" onclick="analyzeRequirement()">Analyze Requirement</button>
+
+          <label for="fileInput">Select file:</label>
+          <input type="file" id="fileInput" title="Upload a file for analysis" />
+          <button class="analyze-btn" onclick="analyzeUploadedFile()">Analyze File</button>
+        </div>
+
+        <!-- Realtime status -->
+        <div id="analyzerStatus" class="status-text">
+          <span class="status-muted">Start typing for realtime analysis...</span>
+        </div>
+      </div>
+
+      <!-- Output Grid -->
+      <div class="output-grid">
+
+        <!-- Highlight -->
+        <div class="output-box">
+          <h3>Highlighted Issues</h3>
+          <div id="highlightedOutput" class="output-content"></div>
+        </div>
+
+        <!-- Corrected -->
+        <div class="output-box">
+          <h3>Corrected Sentence</h3>
+          <div id="correctedOutput" class="output-content"></div>
+        </div>
+
+        <!-- Rewrite -->
+        <div class="output-box">
+          <h3>Professional Rewrite</h3>
+          <div id="rewriteOutput" class="output-content"></div>
+        </div>
+
+      </div>
+
+      <!-- Issues -->
+      <div class="issues-section">
+        <h3>Detected Issues</h3>
+        <div id="issuesOutput"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="/static/app.js"></script>
 </body>
 </html>

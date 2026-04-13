@@ -1,5 +1,8 @@
 let barChartInstance = null;
 let doughnutChartInstance = null;
+let realtimeTimer = null;
+let lastRealtimeValue = "";
+let isAnalyzing = false;
 
 function applySavedTheme() {
   const savedTheme = localStorage.getItem("theme") || "dark-theme";
@@ -114,6 +117,24 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function getAnalyzeButtons() {
+  return document.querySelectorAll(".analyze-btn");
+}
+
+function setAnalyzeButtonsBusy(isBusy) {
+  const buttons = getAnalyzeButtons();
+  buttons.forEach((btn) => {
+    btn.disabled = isBusy;
+    btn.classList.toggle("btn-loading", isBusy);
+    if (isBusy) {
+      btn.dataset.originalText = btn.dataset.originalText || btn.innerText;
+      btn.innerText = "RAA analyzing...";
+    } else if (btn.dataset.originalText) {
+      btn.innerText = btn.dataset.originalText;
+    }
+  });
+}
+
 function renderIssueCards(issues) {
   const issuesOutput = document.getElementById("issuesOutput");
   if (!issuesOutput) return;
@@ -171,6 +192,7 @@ function renderAnalyzerResult(data) {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
+  const analyzerStatus = document.getElementById("analyzerStatus");
 
   if (highlightedOutput) {
     highlightedOutput.innerHTML = data.highlighted_html || "No highlighted issues.";
@@ -184,6 +206,10 @@ function renderAnalyzerResult(data) {
     rewriteOutput.innerText = data.rewrite || data.corrected_text || data.input || "No rewrite available.";
   }
 
+  if (analyzerStatus) {
+    analyzerStatus.innerHTML = `<span class="status-success">RAA analysis completed.</span>`;
+  }
+
   renderIssueCards(data.issues || []);
 }
 
@@ -192,21 +218,68 @@ function renderAnalyzerError(message) {
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
   const issuesOutput = document.getElementById("issuesOutput");
+  const analyzerStatus = document.getElementById("analyzerStatus");
 
   if (highlightedOutput) highlightedOutput.innerText = message || "Analysis failed.";
   if (correctedOutput) correctedOutput.innerText = "";
   if (rewriteOutput) rewriteOutput.innerText = "";
   if (issuesOutput) issuesOutput.innerHTML = "";
+  if (analyzerStatus) {
+    analyzerStatus.innerHTML = `<span class="status-error">${escapeHtml(message || "Analysis failed.")}</span>`;
+  }
 }
 
-async function analyzeRequirement() {
-  const textBox = document.getElementById("requirementText");
+function setAnalyzerLoading(message = "RAA analyzing...") {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
   const issuesOutput = document.getElementById("issuesOutput");
+  const analyzerStatus = document.getElementById("analyzerStatus");
 
-  if (!textBox) return;
+  if (highlightedOutput) highlightedOutput.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
+  if (correctedOutput) correctedOutput.innerText = "Processing...";
+  if (rewriteOutput) rewriteOutput.innerText = "Processing...";
+  if (issuesOutput) issuesOutput.innerHTML = "Preparing AI analysis...";
+  if (analyzerStatus) {
+    analyzerStatus.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
+  }
+}
+
+async function callAnalyzeApi(payload, isFile = false) {
+  const options = isFile
+    ? {
+        method: "POST",
+        body: payload
+      }
+    : {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      };
+
+  const endpoint = isFile ? "/analyze-file" : "/analyze";
+
+  const response = await fetch(endpoint, options);
+
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (jsonError) {
+    throw new Error("Backend returned invalid JSON.");
+  }
+
+  if (!response.ok || data.error) {
+    throw new Error(data.error || `Analysis failed with status ${response.status}.`);
+  }
+
+  return data;
+}
+
+async function analyzeRequirement() {
+  const textBox = document.getElementById("requirementText");
+  if (!textBox || isAnalyzing) return;
 
   const text = textBox.value.trim();
 
@@ -215,48 +288,27 @@ async function analyzeRequirement() {
     return;
   }
 
-  if (highlightedOutput) highlightedOutput.innerText = "Analyzing...";
-  if (correctedOutput) correctedOutput.innerText = "Analyzing...";
-  if (rewriteOutput) rewriteOutput.innerText = "Analyzing...";
-  if (issuesOutput) issuesOutput.innerHTML = "Analyzing...";
+  isAnalyzing = true;
+  setAnalyzeButtonsBusy(true);
+  setAnalyzerLoading("RAA analyzing requirement...");
 
   try {
-    const response = await fetch("/analyze", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ text })
-    });
-
-    let data = {};
-    try {
-      data = await response.json();
-    } catch (jsonError) {
-      renderAnalyzerError("Backend returned invalid response.");
-      return;
-    }
-
-    if (!response.ok || data.error) {
-      renderAnalyzerError(data.error || `Analysis failed with status ${response.status}.`);
-      return;
-    }
-
+    const data = await callAnalyzeApi({ text }, false);
     renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    renderAnalyzerError(`Network error: ${error.message}`);
+    renderAnalyzerError(error.message || "RAA analysis failed.");
+  } finally {
+    isAnalyzing = false;
+    setAnalyzeButtonsBusy(false);
   }
 }
 
 async function analyzeUploadedFile() {
   const fileInput = document.getElementById("fileInput");
-  const highlightedOutput = document.getElementById("highlightedOutput");
-  const correctedOutput = document.getElementById("correctedOutput");
-  const rewriteOutput = document.getElementById("rewriteOutput");
-  const issuesOutput = document.getElementById("issuesOutput");
+  if (!fileInput || isAnalyzing) return;
 
-  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+  if (!fileInput.files || fileInput.files.length === 0) {
     renderAnalyzerError("Select a .txt, .docx, or .pdf file first.");
     return;
   }
@@ -264,35 +316,67 @@ async function analyzeUploadedFile() {
   const formData = new FormData();
   formData.append("file", fileInput.files[0]);
 
-  if (highlightedOutput) highlightedOutput.innerText = "Analyzing uploaded file...";
-  if (correctedOutput) correctedOutput.innerText = "Analyzing...";
-  if (rewriteOutput) rewriteOutput.innerText = "Analyzing...";
-  if (issuesOutput) issuesOutput.innerHTML = "Analyzing...";
+  isAnalyzing = true;
+  setAnalyzeButtonsBusy(true);
+  setAnalyzerLoading("RAA analyzing uploaded file...");
 
   try {
-    const response = await fetch("/analyze-file", {
-      method: "POST",
-      body: formData
-    });
-
-    let data = {};
-    try {
-      data = await response.json();
-    } catch (jsonError) {
-      renderAnalyzerError("Backend returned invalid response.");
-      return;
-    }
-
-    if (!response.ok || data.error) {
-      renderAnalyzerError(data.error || `File analysis failed with status ${response.status}.`);
-      return;
-    }
-
+    const data = await callAnalyzeApi(formData, true);
     renderAnalyzerResult(data);
     loadDashboard();
   } catch (error) {
-    renderAnalyzerError(`Network error: ${error.message}`);
+    renderAnalyzerError(error.message || "RAA file analysis failed.");
+  } finally {
+    isAnalyzing = false;
+    setAnalyzeButtonsBusy(false);
   }
+}
+
+function scheduleRealtimeAnalysis() {
+  const textBox = document.getElementById("requirementText");
+  if (!textBox) return;
+
+  const currentValue = textBox.value.trim();
+
+  if (currentValue.length < 12) {
+    const analyzerStatus = document.getElementById("analyzerStatus");
+    if (analyzerStatus) {
+      analyzerStatus.innerHTML = `<span class="status-muted">Realtime analysis starts after more text is entered.</span>`;
+    }
+    return;
+  }
+
+  if (currentValue === lastRealtimeValue) return;
+
+  clearTimeout(realtimeTimer);
+  realtimeTimer = setTimeout(async () => {
+    if (isAnalyzing) return;
+
+    const latestText = textBox.value.trim();
+    if (latestText.length < 12 || latestText === lastRealtimeValue) return;
+
+    lastRealtimeValue = latestText;
+    isAnalyzing = true;
+    setAnalyzeButtonsBusy(true);
+    setAnalyzerLoading("RAA realtime analysis...");
+
+    try {
+      const data = await callAnalyzeApi({ text: latestText }, false);
+      renderAnalyzerResult(data);
+    } catch (error) {
+      renderAnalyzerError(error.message || "RAA realtime analysis failed.");
+    } finally {
+      isAnalyzing = false;
+      setAnalyzeButtonsBusy(false);
+    }
+  }, 900);
+}
+
+function attachRealtimeAnalyzer() {
+  const textBox = document.getElementById("requirementText");
+  if (!textBox) return;
+
+  textBox.addEventListener("input", scheduleRealtimeAnalysis);
 }
 
 function renderCharts(totalRequirements, ambiguousCount) {
@@ -318,6 +402,7 @@ function renderCharts(totalRequirements, ambiguousCount) {
       options: {
         responsive: true,
         maintainAspectRatio: true,
+        animation: false,
         plugins: {
           legend: { display: false }
         }
@@ -340,7 +425,8 @@ function renderCharts(totalRequirements, ambiguousCount) {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true
+        maintainAspectRatio: true,
+        animation: false
       }
     });
   }
@@ -493,4 +579,5 @@ document.addEventListener("DOMContentLoaded", function () {
   loadDashboard();
   loadHistory();
   loadAdmin();
+  attachRealtimeAnalyzer();
 });
