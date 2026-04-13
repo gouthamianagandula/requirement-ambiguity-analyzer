@@ -105,7 +105,8 @@ async function registerWithEmail() {
 }
 
 function escapeHtml(value) {
-  return String(value ?? "")
+  if (value === null || value === undefined) return "";
+  return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -113,45 +114,47 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-function buildIssuesHtml(issues) {
+function renderIssueCards(issues) {
+  const issuesOutput = document.getElementById("issuesOutput");
+  if (!issuesOutput) return;
+
   if (!issues || issues.length === 0) {
-    return "<p>No AI issues detected.</p>";
+    issuesOutput.innerHTML = "<p>No AI issues detected.</p>";
+    return;
   }
 
   let html = "";
 
   issues.forEach((issue, index) => {
     const category = escapeHtml(issue.category || "Issue");
-    const explanation = escapeHtml(issue.explanation || "No explanation available.");
-    const suggestion = escapeHtml(issue.suggestion || "No suggestion available.");
+    const explanation = escapeHtml(issue.explanation || "");
+    const suggestion = escapeHtml(issue.suggestion || "");
     const replacement = escapeHtml(issue.replacement || "");
     const severity = escapeHtml(issue.severity || "");
-    const issueType = escapeHtml(issue.issue_type || "");
     const term = escapeHtml(issue.term || "");
 
     html += `
       <div class="issue-card">
-        <div class="issue-card-header">
+        <div class="issue-card-head">
           <h4>${category}</h4>
-          ${severity ? `<span class="issue-badge">${severity}</span>` : ""}
+          <span class="issue-severity">${severity}</span>
         </div>
-        ${term ? `<p><strong>Problem Text:</strong> ${term}</p>` : ""}
-        ${issueType ? `<p><strong>Issue Type:</strong> ${issueType}</p>` : ""}
-        <p><strong>Explanation:</strong> ${explanation}</p>
-        <p><strong>Suggestion:</strong> ${suggestion}</p>
+        ${term ? `<p><strong>Highlighted Part:</strong> ${term}</p>` : ""}
+        ${explanation ? `<p><strong>Problem:</strong> ${explanation}</p>` : ""}
+        ${suggestion ? `<p><strong>Suggestion:</strong> ${suggestion}</p>` : ""}
         ${replacement ? `<p><strong>Suggested Fix:</strong> ${replacement}</p>` : ""}
     `;
 
-    if (Array.isArray(issue.alternatives) && issue.alternatives.length > 0) {
-      html += `<div class="issue-list-block"><p><strong>Better Alternatives:</strong></p><ul>`;
+    if (issue.alternatives && issue.alternatives.length > 0) {
+      html += `<div class="issue-list-block"><strong>Better Options:</strong><ul>`;
       issue.alternatives.forEach((alt) => {
         html += `<li>${escapeHtml(alt)}</li>`;
       });
       html += `</ul></div>`;
     }
 
-    if (Array.isArray(issue.meanings) && issue.meanings.length > 0) {
-      html += `<div class="issue-list-block"><p><strong>Possible Meanings:</strong></p><ul>`;
+    if (issue.meanings && issue.meanings.length > 0) {
+      html += `<div class="issue-list-block"><strong>Possible Meanings:</strong><ul>`;
       issue.meanings.forEach((meaning) => {
         html += `<li>${escapeHtml(meaning)}</li>`;
       });
@@ -161,14 +164,13 @@ function buildIssuesHtml(issues) {
     html += `</div>`;
   });
 
-  return html;
+  issuesOutput.innerHTML = html;
 }
 
 function renderAnalyzerResult(data) {
   const highlightedOutput = document.getElementById("highlightedOutput");
   const correctedOutput = document.getElementById("correctedOutput");
   const rewriteOutput = document.getElementById("rewriteOutput");
-  const issuesOutput = document.getElementById("issuesOutput");
 
   if (highlightedOutput) {
     highlightedOutput.innerHTML = data.highlighted_html || "No highlighted issues.";
@@ -182,9 +184,7 @@ function renderAnalyzerResult(data) {
     rewriteOutput.innerText = data.rewrite || data.corrected_text || data.input || "No rewrite available.";
   }
 
-  if (issuesOutput) {
-    issuesOutput.innerHTML = buildIssuesHtml(data.issues || []);
-  }
+  renderIssueCards(data.issues || []);
 }
 
 async function analyzeRequirement() {
@@ -409,11 +409,11 @@ async function loadHistory() {
       html += `
         <div class="sentence-card">
           <h4>History ${index + 1}</h4>
-          <p><strong>Input:</strong> ${escapeHtml(item.input_text)}</p>
-          <p><strong>Predicted Label:</strong> ${escapeHtml(item.predicted_label)}</p>
-          <p><strong>Score:</strong> ${escapeHtml(item.score)}</p>
-          <p><strong>Rewrite:</strong> ${escapeHtml(item.rewrite)}</p>
-          <p><strong>Date:</strong> ${escapeHtml(item.created_at)}</p>
+          <p><strong>Input:</strong> ${item.input_text}</p>
+          <p><strong>Predicted Label:</strong> ${item.predicted_label}</p>
+          <p><strong>Score:</strong> ${item.score}</p>
+          <p><strong>Rewrite:</strong> ${item.rewrite}</p>
+          <p><strong>Date:</strong> ${item.created_at}</p>
         </div>
       `;
     });
@@ -448,9 +448,9 @@ async function loadAdmin() {
         usersHtml += `
           <div class="sentence-card">
             <h4>User ${index + 1}</h4>
-            <p><strong>Name:</strong> ${escapeHtml(user.name)}</p>
-            <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
-            <p><strong>Created:</strong> ${escapeHtml(user.created_at)}</p>
+            <p><strong>Name:</strong> ${user.name}</p>
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>Created:</strong> ${user.created_at}</p>
           </div>
         `;
       });
@@ -465,12 +465,12 @@ async function loadAdmin() {
         historyHtml += `
           <div class="sentence-card">
             <h4>Record ${index + 1}</h4>
-            <p><strong>User:</strong> ${escapeHtml(item.user_name)}</p>
-            <p><strong>Email:</strong> ${escapeHtml(item.user_email)}</p>
-            <p><strong>Input:</strong> ${escapeHtml(item.input_text)}</p>
-            <p><strong>Label:</strong> ${escapeHtml(item.predicted_label)}</p>
-            <p><strong>Score:</strong> ${escapeHtml(item.score)}</p>
-            <p><strong>Date:</strong> ${escapeHtml(item.created_at)}</p>
+            <p><strong>User:</strong> ${item.user_name}</p>
+            <p><strong>Email:</strong> ${item.user_email}</p>
+            <p><strong>Input:</strong> ${item.input_text}</p>
+            <p><strong>Label:</strong> ${item.predicted_label}</p>
+            <p><strong>Score:</strong> ${item.score}</p>
+            <p><strong>Date:</strong> ${item.created_at}</p>
           </div>
         `;
       });
