@@ -126,8 +126,11 @@ function setAnalyzeButtonsBusy(isBusy) {
   buttons.forEach((btn) => {
     btn.disabled = isBusy;
     btn.classList.toggle("btn-loading", isBusy);
+
     if (isBusy) {
-      btn.dataset.originalText = btn.dataset.originalText || btn.innerText;
+      if (!btn.dataset.originalText) {
+        btn.dataset.originalText = btn.innerText;
+      }
       btn.innerText = "RAA analyzing...";
     } else if (btn.dataset.originalText) {
       btn.innerText = btn.dataset.originalText;
@@ -236,10 +239,18 @@ function setAnalyzerLoading(message = "RAA analyzing...") {
   const issuesOutput = document.getElementById("issuesOutput");
   const analyzerStatus = document.getElementById("analyzerStatus");
 
-  if (highlightedOutput) highlightedOutput.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
-  if (correctedOutput) correctedOutput.innerText = "Processing...";
-  if (rewriteOutput) rewriteOutput.innerText = "Processing...";
-  if (issuesOutput) issuesOutput.innerHTML = "Preparing AI analysis...";
+  if (highlightedOutput) {
+    highlightedOutput.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
+  }
+  if (correctedOutput) {
+    correctedOutput.innerText = "Processing...";
+  }
+  if (rewriteOutput) {
+    rewriteOutput.innerText = "Processing...";
+  }
+  if (issuesOutput) {
+    issuesOutput.innerHTML = "Preparing AI analysis...";
+  }
   if (analyzerStatus) {
     analyzerStatus.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
   }
