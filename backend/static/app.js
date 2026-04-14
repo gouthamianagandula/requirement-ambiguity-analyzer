@@ -4,6 +4,7 @@ let realtimeTimer = null;
 let lastRealtimeValue = "";
 let isAnalyzing = false;
 
+/* ================= THEME ================= */
 function applySavedTheme() {
   const savedTheme = localStorage.getItem("theme") || "dark-theme";
   document.body.classList.remove("light-theme", "dark-theme");
@@ -22,91 +23,7 @@ function toggleTheme() {
   }
 }
 
-function showLoginTab(tabName) {
-  const loginTab = document.getElementById("loginTab");
-  const registerTab = document.getElementById("registerTab");
-  const buttons = document.querySelectorAll(".tab-btn");
-
-  buttons.forEach((btn) => btn.classList.remove("active-tab"));
-
-  if (tabName === "login") {
-    if (loginTab) loginTab.classList.add("active-auth-tab");
-    if (registerTab) registerTab.classList.remove("active-auth-tab");
-    if (buttons[0]) buttons[0].classList.add("active-tab");
-  } else {
-    if (registerTab) registerTab.classList.add("active-auth-tab");
-    if (loginTab) loginTab.classList.remove("active-auth-tab");
-    if (buttons[1]) buttons[1].classList.add("active-tab");
-  }
-}
-
-async function loginWithEmail() {
-  const email = document.getElementById("loginEmail")?.value.trim() || "";
-  const password = document.getElementById("loginPassword")?.value.trim() || "";
-  const authMessage = document.getElementById("authMessage");
-
-  if (!email || !password) {
-    if (authMessage) authMessage.innerText = "Enter email and password.";
-    return;
-  }
-
-  try {
-    const response = await fetch("/login-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      if (authMessage) authMessage.innerText = data.error || "Login failed.";
-      return;
-    }
-
-    if (authMessage) authMessage.innerText = "Login successful.";
-    window.location.href = "/analyzer";
-  } catch (error) {
-    if (authMessage) authMessage.innerText = "Login error.";
-  }
-}
-
-async function registerWithEmail() {
-  const name = document.getElementById("registerName")?.value.trim() || "";
-  const email = document.getElementById("registerEmail")?.value.trim() || "";
-  const password = document.getElementById("registerPassword")?.value.trim() || "";
-  const authMessage = document.getElementById("authMessage");
-
-  if (!name || !email || !password) {
-    if (authMessage) authMessage.innerText = "Enter name, email, and password.";
-    return;
-  }
-
-  try {
-    const response = await fetch("/register-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ name, email, password })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      if (authMessage) authMessage.innerText = data.error || "Registration failed.";
-      return;
-    }
-
-    if (authMessage) authMessage.innerText = data.message || "Registration successful.";
-    showLoginTab("login");
-  } catch (error) {
-    if (authMessage) authMessage.innerText = "Registration error.";
-  }
-}
-
+/* ================= HELPERS ================= */
 function escapeHtml(value) {
   if (value === null || value === undefined) return "";
   return String(value)
@@ -117,13 +34,8 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-function getAnalyzeButtons() {
-  return document.querySelectorAll(".analyze-btn");
-}
-
 function setAnalyzeButtonsBusy(isBusy) {
-  const buttons = getAnalyzeButtons();
-  buttons.forEach((btn) => {
+  document.querySelectorAll(".analyze-btn").forEach((btn) => {
     btn.disabled = isBusy;
     btn.classList.toggle("btn-loading", isBusy);
 
@@ -138,125 +50,91 @@ function setAnalyzeButtonsBusy(isBusy) {
   });
 }
 
-function renderIssueCards(issues) {
-  const issuesOutput = document.getElementById("issuesOutput");
-  if (!issuesOutput) return;
+/* ================= LOGIN ================= */
+function showLoginTab(tabName) {
+  const loginTab = document.getElementById("loginTab");
+  const registerTab = document.getElementById("registerTab");
+  const buttons = document.querySelectorAll(".tab-btn");
 
-  if (!issues || issues.length === 0) {
-    issuesOutput.innerHTML = "<p>No AI issues detected.</p>";
+  buttons.forEach((btn) => btn.classList.remove("active-tab"));
+
+  if (tabName === "login") {
+    loginTab?.classList.add("active-auth-tab");
+    registerTab?.classList.remove("active-auth-tab");
+    buttons[0]?.classList.add("active-tab");
+  } else {
+    registerTab?.classList.add("active-auth-tab");
+    loginTab?.classList.remove("active-auth-tab");
+    buttons[1]?.classList.add("active-tab");
+  }
+}
+
+async function loginWithEmail() {
+  const email = document.getElementById("loginEmail")?.value.trim();
+  const password = document.getElementById("loginPassword")?.value.trim();
+  const msg = document.getElementById("authMessage");
+
+  if (!email || !password) {
+    if (msg) msg.innerText = "Enter email and password";
     return;
   }
 
-  let html = "";
+  try {
+    const res = await fetch("/login-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
 
-  issues.forEach((issue) => {
-    const category = escapeHtml(issue.category || "Issue");
-    const explanation = escapeHtml(issue.explanation || "");
-    const suggestion = escapeHtml(issue.suggestion || "");
-    const replacement = escapeHtml(issue.replacement || "");
-    const severity = escapeHtml(issue.severity || "");
-    const term = escapeHtml(issue.term || "");
+    const data = await res.json();
 
-    html += `
-      <div class="issue-card">
-        <div class="issue-card-head">
-          <h4>${category}</h4>
-          <span class="issue-severity">${severity}</span>
-        </div>
-        ${term ? `<p><strong>Highlighted Part:</strong> ${term}</p>` : ""}
-        ${explanation ? `<p><strong>Problem:</strong> ${explanation}</p>` : ""}
-        ${suggestion ? `<p><strong>Suggestion:</strong> ${suggestion}</p>` : ""}
-        ${replacement ? `<p><strong>Suggested Fix:</strong> ${replacement}</p>` : ""}
-    `;
-
-    if (issue.alternatives && issue.alternatives.length > 0) {
-      html += `<div class="issue-list-block"><strong>Better Options:</strong><ul>`;
-      issue.alternatives.forEach((alt) => {
-        html += `<li>${escapeHtml(alt)}</li>`;
-      });
-      html += `</ul></div>`;
+    if (!res.ok) {
+      if (msg) msg.innerText = data.error || "Login failed";
+      return;
     }
 
-    if (issue.meanings && issue.meanings.length > 0) {
-      html += `<div class="issue-list-block"><strong>Possible Meanings:</strong><ul>`;
-      issue.meanings.forEach((meaning) => {
-        html += `<li>${escapeHtml(meaning)}</li>`;
-      });
-      html += `</ul></div>`;
+    window.location.href = "/analyzer";
+  } catch (error) {
+    if (msg) msg.innerText = "Login failed";
+  }
+}
+
+async function registerWithEmail() {
+  const name = document.getElementById("registerName")?.value.trim();
+  const email = document.getElementById("registerEmail")?.value.trim();
+  const password = document.getElementById("registerPassword")?.value.trim();
+  const msg = document.getElementById("authMessage");
+
+  if (!name || !email || !password) {
+    if (msg) msg.innerText = "Fill all fields";
+    return;
+  }
+
+  try {
+    const res = await fetch("/register-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (msg) msg.innerText = data.error || "Registration failed";
+      return;
     }
 
-    html += `</div>`;
-  });
-
-  issuesOutput.innerHTML = html;
-}
-
-function renderAnalyzerResult(data) {
-  const highlightedOutput = document.getElementById("highlightedOutput");
-  const correctedOutput = document.getElementById("correctedOutput");
-  const rewriteOutput = document.getElementById("rewriteOutput");
-  const analyzerStatus = document.getElementById("analyzerStatus");
-
-  if (highlightedOutput) {
-    highlightedOutput.innerHTML = data.highlighted_html || "No highlighted issues.";
-  }
-
-  if (correctedOutput) {
-    correctedOutput.innerText = data.corrected_text || data.input || "No corrected sentence.";
-  }
-
-  if (rewriteOutput) {
-    rewriteOutput.innerText = data.rewrite || data.corrected_text || data.input || "No rewrite available.";
-  }
-
-  if (analyzerStatus) {
-    analyzerStatus.innerHTML = `<span class="status-success">RAA analysis completed.</span>`;
-  }
-
-  renderIssueCards(data.issues || []);
-}
-
-function renderAnalyzerError(message) {
-  const highlightedOutput = document.getElementById("highlightedOutput");
-  const correctedOutput = document.getElementById("correctedOutput");
-  const rewriteOutput = document.getElementById("rewriteOutput");
-  const issuesOutput = document.getElementById("issuesOutput");
-  const analyzerStatus = document.getElementById("analyzerStatus");
-
-  if (highlightedOutput) highlightedOutput.innerText = message || "Analysis failed.";
-  if (correctedOutput) correctedOutput.innerText = "";
-  if (rewriteOutput) rewriteOutput.innerText = "";
-  if (issuesOutput) issuesOutput.innerHTML = "";
-  if (analyzerStatus) {
-    analyzerStatus.innerHTML = `<span class="status-error">${escapeHtml(message || "Analysis failed.")}</span>`;
+    if (msg) msg.innerText = data.message || "Registered";
+    showLoginTab("login");
+  } catch (error) {
+    if (msg) msg.innerText = "Registration failed";
   }
 }
 
-function setAnalyzerLoading(message = "RAA analyzing...") {
-  const highlightedOutput = document.getElementById("highlightedOutput");
-  const correctedOutput = document.getElementById("correctedOutput");
-  const rewriteOutput = document.getElementById("rewriteOutput");
-  const issuesOutput = document.getElementById("issuesOutput");
-  const analyzerStatus = document.getElementById("analyzerStatus");
-
-  if (highlightedOutput) {
-    highlightedOutput.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
-  }
-  if (correctedOutput) {
-    correctedOutput.innerText = "Processing...";
-  }
-  if (rewriteOutput) {
-    rewriteOutput.innerText = "Processing...";
-  }
-  if (issuesOutput) {
-    issuesOutput.innerHTML = "Preparing AI analysis...";
-  }
-  if (analyzerStatus) {
-    analyzerStatus.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
-  }
-}
-
+/* ================= API ================= */
 async function callAnalyzeApi(payload, isFile = false) {
+  const endpoint = isFile ? "/analyze-file" : "/analyze";
+
   const options = isFile
     ? {
         method: "POST",
@@ -264,51 +142,43 @@ async function callAnalyzeApi(payload, isFile = false) {
       }
     : {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       };
 
-  const endpoint = isFile ? "/analyze-file" : "/analyze";
-
-  const response = await fetch(endpoint, options);
+  const res = await fetch(endpoint, options);
 
   let data = {};
   try {
-    data = await response.json();
-  } catch (jsonError) {
+    data = await res.json();
+  } catch (error) {
     throw new Error("Backend returned invalid JSON.");
   }
 
-  if (!response.ok || data.error) {
-    throw new Error(data.error || `Analysis failed with status ${response.status}.`);
+  if (!res.ok || data.error) {
+    throw new Error(data.error || "Analysis failed.");
   }
 
   return data;
 }
 
+/* ================= ANALYZER ================= */
 async function analyzeRequirement() {
   const textBox = document.getElementById("requirementText");
-  if (!textBox || isAnalyzing) return;
+  const text = textBox?.value.trim();
 
-  const text = textBox.value.trim();
-
-  if (!text) {
-    renderAnalyzerError("Enter requirement text first.");
-    return;
-  }
+  if (!text || isAnalyzing) return;
 
   isAnalyzing = true;
   setAnalyzeButtonsBusy(true);
-  setAnalyzerLoading("RAA analyzing requirement...");
+  setAnalyzerLoading();
 
   try {
     const data = await callAnalyzeApi({ text }, false);
     renderAnalyzerResult(data);
-    loadDashboard();
-  } catch (error) {
-    renderAnalyzerError(error.message || "RAA analysis failed.");
+    await loadDashboard();
+  } catch (err) {
+    renderAnalyzerError(err.message || "Analysis failed");
   } finally {
     isAnalyzing = false;
     setAnalyzeButtonsBusy(false);
@@ -317,77 +187,195 @@ async function analyzeRequirement() {
 
 async function analyzeUploadedFile() {
   const fileInput = document.getElementById("fileInput");
-  if (!fileInput || isAnalyzing) return;
+  const file = fileInput?.files?.[0];
 
-  if (!fileInput.files || fileInput.files.length === 0) {
-    renderAnalyzerError("Select a .txt, .docx, or .pdf file first.");
+  if (!file || isAnalyzing) {
+    if (!file) renderAnalyzerError("Select a file first.");
     return;
   }
 
   const formData = new FormData();
-  formData.append("file", fileInput.files[0]);
+  formData.append("file", file);
 
   isAnalyzing = true;
   setAnalyzeButtonsBusy(true);
-  setAnalyzerLoading("RAA analyzing uploaded file...");
+  setAnalyzerLoading("RAA analyzing file...");
 
   try {
     const data = await callAnalyzeApi(formData, true);
     renderAnalyzerResult(data);
-    loadDashboard();
-  } catch (error) {
-    renderAnalyzerError(error.message || "RAA file analysis failed.");
+    await loadDashboard();
+  } catch (err) {
+    renderAnalyzerError(err.message || "File analysis failed");
   } finally {
     isAnalyzing = false;
     setAnalyzeButtonsBusy(false);
   }
 }
 
+/* ================= REALTIME ================= */
 function scheduleRealtimeAnalysis() {
-  const textBox = document.getElementById("requirementText");
-  if (!textBox) return;
+  const text = document.getElementById("requirementText")?.value.trim() || "";
 
-  const currentValue = textBox.value.trim();
-
-  if (currentValue.length < 12) {
-    const analyzerStatus = document.getElementById("analyzerStatus");
-    if (analyzerStatus) {
-      analyzerStatus.innerHTML = `<span class="status-muted">Realtime analysis starts after more text is entered.</span>`;
-    }
-    return;
-  }
-
-  if (currentValue === lastRealtimeValue) return;
+  if (text.length < 12 || text === lastRealtimeValue) return;
 
   clearTimeout(realtimeTimer);
+
   realtimeTimer = setTimeout(async () => {
-    if (isAnalyzing) return;
-
-    const latestText = textBox.value.trim();
-    if (latestText.length < 12 || latestText === lastRealtimeValue) return;
-
-    lastRealtimeValue = latestText;
-    isAnalyzing = true;
-    setAnalyzeButtonsBusy(true);
-    setAnalyzerLoading("RAA realtime analysis...");
-
-    try {
-      const data = await callAnalyzeApi({ text: latestText }, false);
-      renderAnalyzerResult(data);
-    } catch (error) {
-      renderAnalyzerError(error.message || "RAA realtime analysis failed.");
-    } finally {
-      isAnalyzing = false;
-      setAnalyzeButtonsBusy(false);
-    }
-  }, 900);
+    lastRealtimeValue = text;
+    await analyzeRequirement();
+  }, 800);
 }
 
 function attachRealtimeAnalyzer() {
-  const textBox = document.getElementById("requirementText");
-  if (!textBox) return;
+  document.getElementById("requirementText")
+    ?.addEventListener("input", scheduleRealtimeAnalysis);
+}
 
-  textBox.addEventListener("input", scheduleRealtimeAnalysis);
+/* ================= OUTPUT ================= */
+function renderAnalyzerResult(data) {
+  const highlightedOutput = document.getElementById("highlightedOutput");
+  const correctedOutput = document.getElementById("correctedOutput");
+  const rewriteOutput = document.getElementById("rewriteOutput");
+  const analyzerStatus = document.getElementById("analyzerStatus");
+
+  if (highlightedOutput) {
+    highlightedOutput.innerHTML = data.highlighted_html || "";
+  }
+
+  if (correctedOutput) {
+    correctedOutput.innerText = data.corrected_text || "";
+  }
+
+  if (rewriteOutput) {
+    rewriteOutput.innerText = data.rewrite || "";
+  }
+
+  renderIssues(data.issues || []);
+
+  if (analyzerStatus) {
+    analyzerStatus.innerHTML = `<span class="status-success">Done</span>`;
+  }
+}
+
+function renderIssues(issues) {
+  const div = document.getElementById("issuesOutput");
+  if (!div) return;
+
+  if (!issues.length) {
+    div.innerHTML = "No issues";
+    return;
+  }
+
+  div.innerHTML = issues.map((i) => `
+    <div class="issue-card">
+      <div class="issue-card-head">
+        <h4>${escapeHtml(i.category || "Issue")}</h4>
+        <span class="issue-severity">${escapeHtml(i.severity || "Info")}</span>
+      </div>
+      ${i.term ? `<p><strong>Text:</strong> ${escapeHtml(i.term)}</p>` : ""}
+      ${i.explanation ? `<p>${escapeHtml(i.explanation)}</p>` : ""}
+      ${i.replacement ? `<p><b>Fix:</b> ${escapeHtml(i.replacement)}</p>` : ""}
+      ${
+        Array.isArray(i.alternatives) && i.alternatives.length
+          ? `<div class="issue-list-block"><strong>Alternatives:</strong><ul>${i.alternatives.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+          : ""
+      }
+      ${
+        Array.isArray(i.meanings) && i.meanings.length
+          ? `<div class="issue-list-block"><strong>Possible meanings:</strong><ul>${i.meanings.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+          : ""
+      }
+    </div>
+  `).join("");
+}
+
+/* ================= STATUS ================= */
+function setAnalyzerLoading(message = "RAA analyzing...") {
+  const analyzerStatus = document.getElementById("analyzerStatus");
+  const highlightedOutput = document.getElementById("highlightedOutput");
+  const correctedOutput = document.getElementById("correctedOutput");
+  const rewriteOutput = document.getElementById("rewriteOutput");
+  const issuesOutput = document.getElementById("issuesOutput");
+
+  if (analyzerStatus) {
+    analyzerStatus.innerHTML = `<span class="status-loading">${escapeHtml(message)}</span>`;
+  }
+
+  if (highlightedOutput) highlightedOutput.innerHTML = "";
+  if (correctedOutput) correctedOutput.innerText = "Processing...";
+  if (rewriteOutput) rewriteOutput.innerText = "Processing...";
+  if (issuesOutput) issuesOutput.innerHTML = "Preparing AI analysis...";
+}
+
+function renderAnalyzerError(msg) {
+  const analyzerStatus = document.getElementById("analyzerStatus");
+  if (analyzerStatus) {
+    analyzerStatus.innerHTML = `<span class="status-error">${escapeHtml(msg)}</span>`;
+  }
+}
+
+/* ================= DASHBOARD ================= */
+async function loadDashboard() {
+  try {
+    const res = await fetch("/stats");
+    const data = await res.json();
+
+    if (!res.ok) return;
+
+    const totalRequirements = document.getElementById("totalRequirements");
+    const ambiguousCount = document.getElementById("ambiguousCount");
+    const averageScore = document.getElementById("averageScore");
+    const lastLabel = document.getElementById("lastLabel");
+    const profileName = document.getElementById("profileName");
+    const profileEmail = document.getElementById("profileEmail");
+    const profileAvatar = document.querySelector(".profile-avatar");
+    const dashboardSummary = document.getElementById("dashboardSummary");
+
+    if (totalRequirements) {
+      totalRequirements.innerText = data.total_requirements_analyzed ?? 0;
+    }
+
+    if (ambiguousCount) {
+      ambiguousCount.innerText = data.ambiguous_count ?? 0;
+    }
+
+    if (averageScore) {
+      averageScore.innerText = data.average_score ?? 0;
+    }
+
+    if (lastLabel) {
+      lastLabel.innerText = data.last_predicted_label ?? "None";
+    }
+
+    if (profileName) {
+      profileName.innerText = data.user_name || "User";
+    }
+
+    if (profileEmail) {
+      profileEmail.innerText = data.user_email || "";
+    }
+
+    if (profileAvatar && data.user_name) {
+      profileAvatar.innerText = data.user_name.charAt(0).toUpperCase();
+    }
+
+    if (dashboardSummary) {
+      dashboardSummary.innerHTML = `
+        <p><strong>Total Requirements:</strong> ${data.total_requirements_analyzed ?? 0}</p>
+        <p><strong>Ambiguous Count:</strong> ${data.ambiguous_count ?? 0}</p>
+        <p><strong>Average Score:</strong> ${data.average_score ?? 0}</p>
+        <p><strong>Last Predicted Label:</strong> ${data.last_predicted_label ?? "None"}</p>
+      `;
+    }
+
+    renderCharts(
+      Number(data.total_requirements_analyzed || 0),
+      Number(data.ambiguous_count || 0)
+    );
+  } catch (error) {
+    console.log("Dashboard load failed");
+  }
 }
 
 function renderCharts(totalRequirements, ambiguousCount) {
@@ -443,50 +431,7 @@ function renderCharts(totalRequirements, ambiguousCount) {
   }
 }
 
-async function loadDashboard() {
-  try {
-    const response = await fetch("/stats");
-    const data = await response.json();
-
-    if (!response.ok) return;
-
-    const totalRequirements = document.getElementById("totalRequirements");
-    const ambiguousCount = document.getElementById("ambiguousCount");
-    const averageScore = document.getElementById("averageScore");
-    const lastLabel = document.getElementById("lastLabel");
-    const profileName = document.getElementById("profileName");
-    const profileEmail = document.getElementById("profileEmail");
-    const profileAvatar = document.querySelector(".profile-avatar");
-    const dashboardSummary = document.getElementById("dashboardSummary");
-
-    if (totalRequirements) totalRequirements.innerText = data.total_requirements_analyzed;
-    if (ambiguousCount) ambiguousCount.innerText = data.ambiguous_count;
-    if (averageScore) averageScore.innerText = data.average_score;
-    if (lastLabel) lastLabel.innerText = data.last_predicted_label;
-    if (profileName) profileName.innerText = data.user_name;
-    if (profileEmail) profileEmail.innerText = data.user_email;
-    if (profileAvatar && data.user_name) {
-      profileAvatar.innerText = data.user_name.charAt(0).toUpperCase();
-    }
-
-    if (dashboardSummary) {
-      dashboardSummary.innerHTML = `
-        <p><strong>Total Requirements:</strong> ${data.total_requirements_analyzed}</p>
-        <p><strong>Ambiguous Count:</strong> ${data.ambiguous_count}</p>
-        <p><strong>Average Score:</strong> ${data.average_score}</p>
-        <p><strong>Last Predicted Label:</strong> ${data.last_predicted_label}</p>
-      `;
-    }
-
-    renderCharts(
-      Number(data.total_requirements_analyzed || 0),
-      Number(data.ambiguous_count || 0)
-    );
-  } catch (error) {
-    console.log("Dashboard load failed");
-  }
-}
-
+/* ================= HISTORY ================= */
 async function loadHistory() {
   const historyContainer = document.getElementById("historyContainer");
   if (!historyContainer) return;
@@ -512,11 +457,11 @@ async function loadHistory() {
       html += `
         <div class="sentence-card">
           <h4>History ${index + 1}</h4>
-          <p><strong>Input:</strong> ${item.input_text}</p>
-          <p><strong>Predicted Label:</strong> ${item.predicted_label}</p>
-          <p><strong>Score:</strong> ${item.score}</p>
-          <p><strong>Rewrite:</strong> ${item.rewrite}</p>
-          <p><strong>Date:</strong> ${item.created_at}</p>
+          <p><strong>Input:</strong> ${escapeHtml(item.input_text)}</p>
+          <p><strong>Predicted Label:</strong> ${escapeHtml(item.predicted_label)}</p>
+          <p><strong>Score:</strong> ${escapeHtml(item.score)}</p>
+          <p><strong>Rewrite:</strong> ${escapeHtml(item.rewrite)}</p>
+          <p><strong>Date:</strong> ${escapeHtml(item.created_at)}</p>
         </div>
       `;
     });
@@ -527,6 +472,7 @@ async function loadHistory() {
   }
 }
 
+/* ================= ADMIN ================= */
 async function loadAdmin() {
   const adminUsers = document.getElementById("adminUsers");
   const adminHistory = document.getElementById("adminHistory");
@@ -551,9 +497,9 @@ async function loadAdmin() {
         usersHtml += `
           <div class="sentence-card">
             <h4>User ${index + 1}</h4>
-            <p><strong>Name:</strong> ${user.name}</p>
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>Created:</strong> ${user.created_at}</p>
+            <p><strong>Name:</strong> ${escapeHtml(user.name)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
+            <p><strong>Created:</strong> ${escapeHtml(user.created_at)}</p>
           </div>
         `;
       });
@@ -568,12 +514,12 @@ async function loadAdmin() {
         historyHtml += `
           <div class="sentence-card">
             <h4>Record ${index + 1}</h4>
-            <p><strong>User:</strong> ${item.user_name}</p>
-            <p><strong>Email:</strong> ${item.user_email}</p>
-            <p><strong>Input:</strong> ${item.input_text}</p>
-            <p><strong>Label:</strong> ${item.predicted_label}</p>
-            <p><strong>Score:</strong> ${item.score}</p>
-            <p><strong>Date:</strong> ${item.created_at}</p>
+            <p><strong>User:</strong> ${escapeHtml(item.user_name)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(item.user_email)}</p>
+            <p><strong>Input:</strong> ${escapeHtml(item.input_text)}</p>
+            <p><strong>Label:</strong> ${escapeHtml(item.predicted_label)}</p>
+            <p><strong>Score:</strong> ${escapeHtml(item.score)}</p>
+            <p><strong>Date:</strong> ${escapeHtml(item.created_at)}</p>
           </div>
         `;
       });
@@ -585,7 +531,62 @@ async function loadAdmin() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+/* ================= PREMIUM ================= */
+function copyResult() {
+  const text =
+    document.getElementById("rewriteOutput")?.innerText ||
+    document.getElementById("correctedOutput")?.innerText ||
+    "";
+
+  if (!text) {
+    alert("Nothing to copy");
+    return;
+  }
+
+  navigator.clipboard.writeText(text)
+    .then(() => alert("Copied"))
+    .catch(() => alert("Copy failed"));
+}
+
+function downloadReport() {
+  const originalText = document.getElementById("requirementText")?.value || "";
+  const correctedText = document.getElementById("correctedOutput")?.innerText || "";
+  const rewriteText = document.getElementById("rewriteOutput")?.innerText || "";
+  const issuesText = document.getElementById("issuesOutput")?.innerText || "";
+
+  const text = `
+=== REQUIREMENT ANALYSIS REPORT ===
+
+Original:
+${originalText}
+
+----------------------------------
+
+Corrected:
+${correctedText}
+
+----------------------------------
+
+Rewrite:
+${rewriteText}
+
+----------------------------------
+
+Issues:
+${issuesText}
+`;
+
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "report.txt";
+  a.click();
+
+  URL.revokeObjectURL(a.href);
+}
+
+/* ================= INIT ================= */
+document.addEventListener("DOMContentLoaded", () => {
   applySavedTheme();
   loadDashboard();
   loadHistory();
