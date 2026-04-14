@@ -1,15 +1,43 @@
+import json
 import os
-from typing import List, Literal
+from typing import Any, Dict, List
 
-from google import genai
-from pydantic import BaseModel, Field
+from groq import Groq
 
 from backend.ai_prompts import SYSTEM_PROMPT
 
 
-class AnalysisIssue(BaseModel):
-    term: str = Field(description="Exact problematic word or short phrase.")
-    issue_type: Literal[
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant").strip()
+
+CACHE: Dict[str, Dict[str, Any]] = {}
+
+
+def _safe_json_load(text: str) -> Dict[str, Any] | None:
+    try:
+        return json.loads(text)
+    except Exception:
+        return None
+
+
+def _normalize_string(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    return str(value).strip()
+
+
+def _normalize_list(value: Any) -> List[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return []
+
+
+def _normalize_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
+    issue_type = _normalize_string(issue.get("issue_type"), "style")
+    category = _normalize_string(issue.get("category"), "Style")
+    severity = _normalize_string(issue.get("severity"), "Medium")
+
+    allowed_issue_types = {
         "grammar",
         "spelling",
         "punctuation",
@@ -25,58 +53,107 @@ class AnalysisIssue(BaseModel):
         "double_negative",
         "multiple_meaning",
         "style",
-    ] = Field(description="Type of issue.")
-    category: str = Field(description="Readable category name.")
-    explanation: str = Field(description="Why this is a problem.")
-    suggestion: str = Field(description="How to improve it.")
-    replacement: str = Field(description="Direct replacement if applicable.")
-    severity: Literal["Low", "Medium", "High"] = Field(description="Issue severity.")
-    alternatives: List[str] = Field(default_factory=list, description="Clear alternative rewrites.")
-    meanings: List[str] = Field(default_factory=list, description="Possible meanings if ambiguous.")
-
-
-class AnalysisResult(BaseModel):
-    issues: List[AnalysisIssue] = Field(default_factory=list)
-    corrected_text: str = Field(description="Grammar-corrected text.")
-    rewrite: str = Field(description="Professional and clearer rewrite.")
-
-
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview").strip()
-
-# SDK reads GEMINI_API_KEY from environment automatically
-client = genai.Client()
-
-CACHE: dict[str, dict] = {}
-
-
-def _error_result(text: str, message: str) -> dict:
-    return {
-        "issues": [],
-        "corrected_text": text,
-        "rewrite": text,
-        "error": message,
     }
+
+    if issue_type not in allowed_issue_types:
+        issue_type = "style"
+
+    if severity not in {"Low", "Medium", "High"}:
+        severity = "Medium"
+
+    return {
+        "term": _normalize_string(issue.get("term")),
+        "issue_type": issue_type,
+        "category": category,
+        "explanation": _normalize_string(issue.get("explanation")),
+        "suggestion": _normalize_string(issue.get("suggestion")),
+        "replacement": _normalize_string(issue.get("replacement")),
+        "severity": severity,
+        "alternatives": _normalize_list(issue.get("alternatives")),
+        "meanings": _normalize_list(issue.get("meanings")),
+    }
+
+
+def _extract_json_block(text: str) -> str:
+    text = text.strip()
+
+    if text.startswith("```"):
+        text = text.replace("```json", "").replace("```", "").strip()
+
+    start = text.find("{")
+    end = text.rfind("}")
+
+    if start == -1 or end == -1 or end < start:
+        return ""
+
+    return text[start:end + 1]
 
 
 def _build_prompt(text: str) -> str:
     return f"""
-Analyze the following user text carefully.
+Return ONLY valid JSON.
+Do not add markdown.
+Do not add triple backticks.
+Do not add explanation outside JSON.
 
-You must:
-- detect ambiguity, grammar, punctuation, spelling, unclear pronouns, vague wording, confusing structure, wrong verb forms, and double negatives
-- return useful issues
-- improve corrected_text
-- make rewrite more professional and clearer
-- not repeat the original unless it is already correct
-- keep "term" short and exact
-- avoid placeholders like [exact noun]
+Required JSON format:
+{{
+  "issues": [
+    {{
+      "term": "",
+      "issue_type": "",
+      "category": "",
+      "explanation": "",
+      "suggestion": "",
+      "replacement": "",
+      "severity": "",
+      "alternatives": [],
+      "meanings": []
+    }}
+  ],
+  "corrected_text": "",
+  "rewrite": ""
+}}
+
+Rules:
+- corrected_text must fix grammar, punctuation, and spelling.
+- rewrite must be clearer, more professional, and less ambiguous.
+- If no issue exists, return empty issues array.
+- Keep "term" short and exact.
+- Do not use placeholders like [exact noun].
+- Analyze the actual text dynamically.
 
 User text:
 {text}
 """.strip()
 
 
-def analyze_with_ai(text: str) -> dict:
+def _error_result(text: str, message: str) -> Dict[str, Any]:
+    return {
+        "issues": [],
+        "corrected_text": text,
+        "rewrite": text,
+        "error": message
+    }
+
+
+def _success_result(
+    text: str,
+    issues: List[Dict[str, Any]],
+    corrected_text: str,
+    rewrite: str
+) -> Dict[str, Any]:
+    result = {
+        "issues": issues,
+        "corrected_text": corrected_text,
+        "rewrite": rewrite,
+        "error": ""
+    }
+    CACHE[text] = result
+    return result
+
+
+def analyze_with_ai(text: str) -> Dict[str, Any]:
     text = (text or "").strip()
 
     if not text:
@@ -86,48 +163,63 @@ def analyze_with_ai(text: str) -> dict:
         return CACHE[text]
 
     if len(text.split()) < 2:
-        result = {
-            "issues": [],
-            "corrected_text": text,
-            "rewrite": text,
-            "error": "",
-        }
-        CACHE[text] = result
-        return result
+        return _success_result(text, [], text, text)
+
+    if not GROQ_API_KEY:
+        return _error_result(text, "RAA configuration error: GROQ_API_KEY is missing.")
 
     try:
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=_build_prompt(text),
-            config={
-                "system_instruction": SYSTEM_PROMPT,
-                "response_mime_type": "application/json",
-                "response_json_schema": AnalysisResult.model_json_schema(),
-                "temperature": 0.1,
-                "top_p": 0.8,
-                "top_k": 20,
-                "max_output_tokens": 700,
-            },
+        client = Groq(api_key=GROQ_API_KEY)
+
+        completion = client.chat.completions.create(
+            model=GROQ_MODEL,
+            temperature=0.1,
+            messages=[
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": _build_prompt(text)
+                }
+            ]
         )
 
-        parsed = AnalysisResult.model_validate_json(response.text)
+        raw_text = completion.choices[0].message.content or ""
+        json_text = _extract_json_block(raw_text)
 
-        corrected_text = parsed.corrected_text.strip() or text
-        rewrite = parsed.rewrite.strip() or corrected_text
+        if not json_text:
+            return _error_result(
+                text,
+                "RAA could not read the AI response correctly. Please try again."
+            )
 
-        # keep rewrite useful
-        if rewrite == text and corrected_text != text:
+        parsed = _safe_json_load(json_text)
+        if not isinstance(parsed, dict):
+            return _error_result(
+                text,
+                "RAA could not parse the AI response. Please try again."
+            )
+
+        issues_raw = parsed.get("issues", [])
+        if not isinstance(issues_raw, list):
+            issues_raw = []
+
+        issues: List[Dict[str, Any]] = []
+        for issue in issues_raw:
+            if isinstance(issue, dict):
+                normalized = _normalize_issue(issue)
+                if normalized["term"] or normalized["explanation"]:
+                    issues.append(normalized)
+
+        corrected_text = _normalize_string(parsed.get("corrected_text"), text) or text
+        rewrite = _normalize_string(parsed.get("rewrite"), corrected_text) or corrected_text
+
+        if rewrite.strip() == text.strip() and corrected_text.strip() != text.strip():
             rewrite = corrected_text
 
-        result = {
-            "issues": [issue.model_dump() for issue in parsed.issues],
-            "corrected_text": corrected_text,
-            "rewrite": rewrite,
-            "error": "",
-        }
-
-        CACHE[text] = result
-        return result
+        return _success_result(text, issues, corrected_text, rewrite)
 
     except Exception as e:
         return _error_result(text, f"RAA analysis failed: {str(e)}")
