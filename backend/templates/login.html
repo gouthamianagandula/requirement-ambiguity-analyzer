@@ -1,133 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Requirement Ambiguity Analyzer</title>
-  <link rel="stylesheet" href="/static/style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAA Login</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-  <header class="site-header">
+
+<body class="dark-theme">
+
+<header class="site-header">
     <div class="brand-wrap">
-      <div class="brand-logo app-logo" aria-label="Logo">
-        <span class="logo-ring"></span>
-        <span class="logo-dot"></span>
-      </div>
-      <div class="brand-text">
-        <h2>Requirement Ambiguity Analyzer</h2>
-      </div>
+        <div class="app-logo">
+            <span class="logo-ring"></span>
+            <span class="logo-dot"></span>
+        </div>
+        <div class="brand-text">
+            <h2>RAA</h2>
+        </div>
     </div>
 
     <nav class="site-nav">
-      <a href="/blog">Blog</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/services">Services</a>
-      <a href="/results">Results</a>
-      <a href="/training">Training</a>
-      <a href="/tools">Tools</a>
-      <a href="/consulting">Consulting</a>
-      <a href="/contact">Contact</a>
+        <a href="/">Home</a>
+        <a href="/analyzer">Analyzer</a>
+        <a href="/history-page">History</a>
     </nav>
+</header>
 
-    <div class="header-actions">
-      <a href="#signin-card" class="header-signin-btn">Sign in</a>
+<div class="modern-login-page">
+
+    <!-- LEFT SIDE -->
+    <div class="login-info-panel">
+        <div class="info-badge">AI Requirement Analyzer</div>
+
+        <h1>Write Better Requirements with AI</h1>
+
+        <p>
+            Detect ambiguity, grammar issues, unclear pronouns, and improve sentence clarity.
+            Build professional, clear, and structured requirements using RAA.
+        </p>
+
+        <div class="feature-grid">
+            <div class="feature-tile">
+                <h3>Ambiguity Detection</h3>
+                <p>Identify unclear meanings, vague terms, and confusing sentence structures.</p>
+            </div>
+
+            <div class="feature-tile">
+                <h3>Grammar Correction</h3>
+                <p>Automatically fix grammar, spelling, and punctuation errors.</p>
+            </div>
+
+            <div class="feature-tile">
+                <h3>AI Rewrite</h3>
+                <p>Convert your text into clear and professional language instantly.</p>
+            </div>
+
+            <div class="feature-tile">
+                <h3>Real-time Analysis</h3>
+                <p>Fast processing with smart AI-based suggestions and insights.</p>
+            </div>
+        </div>
     </div>
-  </header>
 
-  <main class="modern-login-page">
+    <!-- RIGHT SIDE -->
+    <div class="login-card-wrap">
+        <div class="login-card">
+
+            <div class="login-card-brand">RAA</div>
+            <h2>Sign In</h2>
+
+            <!-- GOOGLE LOGIN -->
+            <a href="/login/google" class="google-login-btn">
+                <div class="google-icon">G</div>
+                Continue with Google
+            </a>
+
+            <div class="login-divider">
+                <span>or</span>
+            </div>
+
+            <!-- TABS -->
+            <div class="login-tabs">
+                <button class="tab-btn active-tab" onclick="switchTab('login')">Login</button>
+                <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm" class="auth-tab active-auth-tab">
+                <div class="login-input-group">
+                    <input type="email" placeholder="Email" required>
+                    <input type="password" placeholder="Password" required>
+                </div>
+
+                <div class="login-row">
+                    <label class="remember-me">
+                        <input type="checkbox"> Remember me
+                    </label>
+                    <a href="#" class="forgot-link">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="email-login-btn active-submit-btn">Login</button>
+            </form>
+
+            <!-- SIGNUP FORM -->
+            <form id="signupForm" class="auth-tab">
+                <div class="login-input-group">
+                    <input type="text" placeholder="Full Name" required>
+                    <input type="email" placeholder="Email" required>
+                    <input type="password" placeholder="Password" required>
+                </div>
+
+                <button type="submit" class="email-login-btn active-submit-btn">Create Account</button>
+            </form>
+
+            <div id="authMessage" class="auth-message"></div>
+
+            <div class="login-footer-text">
+                Secure login powered by RAA system
+            </div>
+        </div>
+    </div>
+
+    <!-- BACKGROUND SHAPES -->
     <div class="login-bg-shape shape-one"></div>
     <div class="login-bg-shape shape-two"></div>
     <div class="login-bg-shape shape-three"></div>
 
-    <section class="login-info-panel">
-      <div class="info-badge">AI Powered Requirement Engineering</div>
+</div>
 
-      <h1>Requirement Ambiguity Analyzer</h1>
-      <p>
-        Analyze software requirements with AI, detect vague words,
-        improve clarity, highlight weak statements, and generate
-        professional rewrites for better requirement quality.
-      </p>
+<script>
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+    document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active-auth-tab'));
 
-      <div class="feature-grid">
-        <div class="feature-tile">
-          <h3>Smart Detection</h3>
-          <p>Detect ambiguous words, weak modal verbs, and vague requirement phrases in real time.</p>
-        </div>
+    if (tab === 'login') {
+        document.getElementById('loginForm').classList.add('active-auth-tab');
+        document.querySelectorAll('.tab-btn')[0].classList.add('active-tab');
+    } else {
+        document.getElementById('signupForm').classList.add('active-auth-tab');
+        document.querySelectorAll('.tab-btn')[1].classList.add('active-tab');
+    }
+}
+</script>
 
-        <div class="feature-tile">
-          <h3>Rewrite Suggestions</h3>
-          <p>Get cleaner, stronger, and more measurable requirement sentences instantly.</p>
-        </div>
-
-        <div class="feature-tile">
-          <h3>Dashboard Analytics</h3>
-          <p>Track total analyses, ambiguity count, average score, and visual graphs.</p>
-        </div>
-
-        <div class="feature-tile">
-          <h3>Professional Workflow</h3>
-          <p>Use login, analyzer, dashboard, history, admin panel, and document upload in one app.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="login-card-wrap">
-      <div class="login-card" id="signin-card">
-        <div class="login-card-brand">Requirement Ambiguity Analyzer</div>
-        <h2>Log in to continue</h2>
-
-        <a href="/login/google" class="google-login-btn">
-          <span class="google-icon">G</span>
-          <span>Continue with Google</span>
-        </a>
-
-        <div class="login-divider">
-          <span>OR</span>
-        </div>
-
-        <div class="login-tabs">
-          <button type="button" class="tab-btn active-tab" onclick="showLoginTab('login')">Email Login</button>
-          <button type="button" class="tab-btn" onclick="showLoginTab('register')">Create Account</button>
-        </div>
-
-        <div id="loginTab" class="auth-tab active-auth-tab">
-          <div class="login-input-group">
-            <input type="email" id="loginEmail" placeholder="Email" />
-            <input type="password" id="loginPassword" placeholder="Password" />
-          </div>
-
-          <div class="login-row">
-            <label class="remember-me">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
-
-            <a href="/contact" class="forgot-link">Need help?</a>
-          </div>
-
-          <button class="email-login-btn active-submit-btn" onclick="loginWithEmail()">LOG IN</button>
-        </div>
-
-        <div id="registerTab" class="auth-tab">
-          <div class="login-input-group">
-            <input type="text" id="registerName" placeholder="Full Name" />
-            <input type="email" id="registerEmail" placeholder="Email" />
-            <input type="password" id="registerPassword" placeholder="Password" />
-          </div>
-
-          <button class="email-login-btn active-submit-btn" onclick="registerWithEmail()">CREATE ACCOUNT</button>
-        </div>
-
-        <div id="authMessage" class="auth-message"></div>
-
-        <p class="login-footer-text">
-          Secure sign-in is enabled with Google and Email Password.
-        </p>
-      </div>
-    </section>
-  </main>
-
-  <script src="/static/app.js"></script>
 </body>
 </html>
