@@ -110,7 +110,7 @@ def read_stats():
     return {
         "total_requirements_analyzed": int(data.get("total_requirements_analyzed", 0)),
         "ambiguous_count": int(data.get("ambiguous_count", 0)),
-        "average_score": data.get("average_score", 0),
+        "average_score": float(data.get("average_score", 0)),
         "last_predicted_label": data.get("last_predicted_label", "None"),
         "total_score_sum": float(data.get("total_score_sum", 0)),
     }
