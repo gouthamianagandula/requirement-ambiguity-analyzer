@@ -1013,3 +1013,72 @@ input[type="file"] {
     align-items: flex-start;
   }
 }
+/* ================= FINAL UI FIX (NO BREAK) ================= */
+
+/* fix ugly spacing issue */
+.main-content {
+  gap: 24px;
+}
+
+/* improve textarea look */
+textarea {
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* improve result panels */
+.result-panel {
+  transition: 0.25s ease;
+}
+
+.result-panel:hover {
+  transform: translateY(-2px);
+}
+
+/* fix status spacing */
+#analyzerStatus {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/* better output box */
+.result-box {
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+/* fix buttons alignment */
+.action-row {
+  align-items: center;
+}
+
+/* fix sidebar dashboard spacing */
+.dashboard-item strong {
+  font-size: 26px;
+}
+
+/* smoother cards */
+.issue-card {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* better hover feel */
+.primary-btn:hover {
+  box-shadow: 0 10px 25px rgba(79, 124, 255, 0.35);
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* fix mobile UI */
+@media (max-width: 720px) {
+  textarea {
+    min-height: 180px;
+  }
+
+  .result-box {
+    font-size: 14px;
+  }
+}
